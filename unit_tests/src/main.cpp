@@ -23,8 +23,8 @@ template <>
 auto decl<test>()
 {
   return json_bind(
-      bind("value", &test::value, jsb::signed_),
-      bind("name", &test::name, jsb::string_)
+      bind("value", &test::value),
+      bind("name", &test::name)
       );
 }
 }
