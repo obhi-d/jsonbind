@@ -38,6 +38,20 @@ template <typename Class, typename ValType>
 using free_set_fn = void (*)(Class&, ValType);
 
 // Concepts
+// Decl
+template <typename Class>
+using decl_t = std::decay_t<decltype(decl<Class>())>;
+
+// Utils
+template <typename Class>
+inline constexpr std::size_t tuple_size = std::tuple_size_v<decl_t<Class>>;
+
+template <typename Class>
+concept is_class_bound = tuple_size<Class> > 0;
+
+template <typename Class, typename M>
+concept is_member_bound = is_class_bound<M>;
+
 // Strings
 template <typename T>
 concept is_string_type =
@@ -54,13 +68,19 @@ concept is_string_ctor_valid = requires(T t)
 template <typename T>
 concept is_string_convertible = requires(T t)
 {
-  {std::to_string(t)}->std::same_as<std::string>;
+  {
+    std::to_string(t)
+  }
+  ->std::same_as<std::string>;
 };
 
 template <typename T>
 concept has_string_transform = requires(T t)
 {
-  {jsb::to_string(t)}->std::same_as<std::string>;
+  {
+    jsb::to_string(t)
+  }
+  ->std::same_as<std::string>;
 };
 
 template <typename T>
@@ -87,33 +107,31 @@ concept is_float_v = std::is_floating_point_v<T>;
 template <typename T>
 concept is_bool_v = std::is_same_v<T, bool>;
 
-// Decl
-template <typename Class>
-using decl_t = std::decay_t<decltype(decl<Class>())>;
-
-template <typename Class>
-inline constexpr std::size_t tuple_size = std::tuple_size_v<decl_t<Class>>;
+template <typename T>
+concept is_value = is_bool_v<T> || is_signed_v<T> || is_unsigned_v<T> ||
+                   is_float_v<T> || is_string_v<T>;
 
 // Array
-template <typename Class, typename M>
-using array_val_t = std::decay_t<decltype(*std::begin(M()))>;
-
-template <typename Class, typename M>
-concept is_bound_obj_list =
-    std::tuple_size_v<decl_t<array_val_t<Class, M>>> > 0;
-
-template <typename Class, typename M>
-concept is_value_list =
-    is_bool_v<array_val_t<Class, M>> || is_signed_v<array_val_t<Class, M>> ||
-    is_unsigned_v<array_val_t<Class, M>> || is_float_v<array_val_t<Class, M>> ||
-    is_string_v<array_val_t<Class, M>>;
-
+template <typename Class>
+concept is_iterable = requires(Class obj)
+{
+  (*std::begin(obj));
+  (*std::end(obj));
+};
 
 template <typename Class>
-concept is_class_bound = tuple_size<Class> > 0;
+using array_value_type = std::decay_t<decltype(*std::begin(Class()))>;
 
-template <typename Class, typename M>
-concept is_member_bound = is_class_bound<M>;
+template <typename Class>
+concept is_array_of_objects =
+    is_iterable<Class>&& is_class_bound<array_value_type<Class>>;
+
+template <typename Class>
+concept is_array_of_values = is_iterable<Class> && !is_string_v<Class> &&
+                             is_value<array_value_type<Class>>;
+
+template <typename Class>
+concept is_array_v = is_array_of_objects<Class> || is_array_of_values<Class>;
 
 // Map
 template <typename Class>
@@ -126,15 +144,17 @@ concept is_value_pair_list = requires(Class obj)
 };
 
 template <typename Class>
-concept is_name_pair_list = is_value_pair_list<Class> &&
+concept is_name_pair_list = is_value_pair_list<Class>&&
     is_string_v<std::decay_t<decltype((*std::begin(Class())).first)>>;
 
+template <typename Class>
+concept is_map_v = is_name_pair_list<Class> || is_class_bound<Class>;
+
 // Deduced decl type check
-template <template <typename Class, typename M> class Decl,
-    class ArgDecl>
+template <template <typename Class, typename M> class Decl, class ArgDecl>
 inline constexpr bool is_same_decl_v =
     std::is_same_v<Decl<typename ArgDecl::ClassTy, typename ArgDecl::MemTy>,
-        ArgDecl>;
+                   ArgDecl>;
 
 } // namespace detail
 } // namespace jsb

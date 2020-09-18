@@ -5,6 +5,7 @@
 #include <json_ostream.hpp>
 #include <iostream>
 #include <vector>
+#include <map>
 
 struct test
 {
@@ -15,6 +16,7 @@ struct test
 struct complex
 {
   std::vector<test> array;
+  std::map<std::string, int> map;
 };
 
 namespace jsb
@@ -27,6 +29,15 @@ auto decl<test>()
       bind("name", &test::name)
       );
 }
+template <>
+auto decl<complex>()
+{
+  return json_bind(
+      bind("array", &complex::array),
+      bind("map", &complex::map)
+  );
+}
+
 }
 
 int main()
@@ -47,8 +58,16 @@ int main()
   obj.name = "4";
   complx.array.push_back(obj);
 
+  complx.map = {
+      {"first", 1},
+      { "second", 2},
+      { "third", 3},
+  };
+
+
   jsb::print_obj(std::cout, obj);
   std::cout << std::endl;
   jsb::print_array(std::cout, complx.array);
-
+  std::cout << std::endl;
+  jsb::print_obj(std::cout, complx);
 }

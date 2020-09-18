@@ -146,19 +146,20 @@ void json_ostream::print(const Value& obj)
 {
   using value_type = std::decay_t<Value>;
 
-  if constexpr (detail::is_class_bound<value_type>)
+  if constexpr (detail::is_map_v<value_type>)
     json_ostream::object(ostr).print(obj);
-  else if constexpr (detail::is_bool_v<value_type>)
-    ostr << std::boolalpha << static_cast<bool>(obj);
+  else if constexpr (detail::is_array_v<value_type>)
+    json_ostream::array(ostr).print(obj);
   else if constexpr (detail::is_float_v<value_type>)
     ostr << static_cast<double>(obj);
   else if constexpr (detail::is_signed_v<value_type>)
     ostr << static_cast<std::int64_t>(obj);
   else if constexpr (detail::is_unsigned_v<value_type>)
     ostr << static_cast<std::uint64_t>(obj);
+  else if constexpr (detail::is_bool_v<value_type>)
+    ostr << std::boolalpha << static_cast<bool>(obj);
   else if constexpr (detail::is_string_v<value_type>)
     ostr << "\"" << detail::as_string(obj) << "\"";
-
 }
 
 template <typename Class>
