@@ -21,7 +21,7 @@ public:
   object as_object();
 
   template <typename Value>
-  inline void print(Value const& obj);
+  inline void stream(Value const& obj);
 
   json_ostream(json_ostream const&) noexcept = delete;
 
@@ -53,13 +53,13 @@ public:
   }
 
   template <typename Class>
-  requires(detail::BoundClass<Class>) void print(Class const& obj)
+  requires(detail::BoundClass<Class>) void stream(Class const& obj)
   {
     detail::for_all<Class>(*this, obj);
   }
 
   template <typename Class>
-  requires(detail::NamePairList<Class>) void print(Class const& obj)
+  requires(detail::NamePairList<Class>) void stream(Class const& obj)
   {
     for (auto& pair : obj)
     {
@@ -67,7 +67,7 @@ public:
         ostr << ", ";
       first = false;
       ostr << "\"" << detail::as_string(pair.first) << "\": ";
-      json_ostream::print(pair.second);
+      json_ostream::stream(pair.second);
     }
   }
 
@@ -107,7 +107,7 @@ public:
   }
 
   template <typename Class>
-  void print(Class const& obj)
+  void stream(Class const& obj)
   {
     for (auto const& each : obj)
     {
@@ -115,7 +115,7 @@ public:
       if (!first)
         ostr << ", ";
       first = false;
-      json_ostream::print(each);
+      json_ostream::stream(each);
     }
   }
 
@@ -144,14 +144,14 @@ json_ostream::object json_ostream::as_object()
 }
 
 template <typename Value>
-void json_ostream::print(const Value& obj)
+void json_ostream::stream(const Value& obj)
 {
   using value_type = std::decay_t<Value>;
 
   if constexpr (detail::IsMap<value_type>)
-    json_ostream::object(ostr).print(obj);
+    json_ostream::object(ostr).stream(obj);
   else if constexpr (detail::IsArray<value_type>)
-    json_ostream::array(ostr).print(obj);
+    json_ostream::array(ostr).stream(obj);
   else if constexpr (detail::IsFloat<value_type>)
     ostr << static_cast<double>(obj);
   else if constexpr (detail::IsSigned<value_type>)
@@ -165,17 +165,17 @@ void json_ostream::print(const Value& obj)
 }
 
 template <typename Class>
-void print_obj(std::ostream& ostr, Class const& obj)
+void stream_obj(std::ostream& ostr, Class const& obj)
 {
-  json_ostream::object printer(ostr);
-  printer.print(obj);
+  json_ostream::object streamer(ostr);
+  streamer.stream(obj);
 }
 
 template <typename Class>
-void print_array(std::ostream& ostr, Class const& obj)
+void stream_array(std::ostream& ostr, Class const& obj)
 {
-  json_ostream::array printer(ostr);
-  printer.print(obj);
+  json_ostream::array streamer(ostr);
+  streamer.stream(obj);
 }
 
 template <typename Class, typename Decl>
@@ -186,6 +186,6 @@ void json_ostream::object::operator()(Class const& obj, const Decl& decl)
   first = false;
 
   ostr << "\"" << decl.key() << "\": ";
-  json_ostream::print(decl.value(obj));
+  json_ostream::stream(decl.value(obj));
 }
 } // namespace jsb
