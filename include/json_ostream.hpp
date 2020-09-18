@@ -3,24 +3,22 @@
 //
 #pragma once
 
-#include <ostream>
 #include <cassert>
+#include <json_bind.hpp>
+#include <ostream>
 #include <string>
 #include <string_view>
-#include <json_bind.hpp>
 
 namespace jsb
 {
-
-
 class json_ostream
 {
 public:
-  struct array;
-  struct object;
+  class array;
+  class object;
 
-  array         as_array();
-  object        as_object();
+  array  as_array();
+  object as_object();
 
   template <typename Value>
   inline void print(Value const& obj);
@@ -28,14 +26,8 @@ public:
   json_ostream(json_ostream const&) noexcept = delete;
 
 protected:
-
-
-  explicit json_ostream(std::ostream& i_ostr) noexcept : ostr(i_ostr) {} 
-  json_ostream(json_ostream&& i_other) noexcept
-      : ostr(i_other.ostr)
-  {
-  }
-
+  explicit json_ostream(std::ostream& i_ostr) noexcept : ostr(i_ostr) {}
+  json_ostream(json_ostream&& i_other) noexcept : ostr(i_other.ostr) {}
 
 protected:
   std::ostream& ostr;
@@ -44,7 +36,10 @@ protected:
 class json_ostream::object : public json_ostream
 {
 public:
-  explicit object(std::ostream& ostr) : json_ostream(ostr) { begin(); }
+  explicit object(std::ostream& ostr) : json_ostream(ostr)
+  {
+    begin();
+  }
   object(object&& i_other) noexcept
       : json_ostream(std::move(i_other)), first(i_other.first)
   {
@@ -52,18 +47,19 @@ public:
   }
 
   object(object const& ostr) noexcept = delete;
-  ~object() { end(); }
+  ~object()
+  {
+    end();
+  }
 
   template <typename Class>
-  requires (detail::is_class_bound<Class>)
-  void print(Class const& obj)
+  requires(detail::BoundClass<Class>) void print(Class const& obj)
   {
     detail::for_all<Class>(*this, obj);
   }
 
   template <typename Class>
-  requires (detail::is_name_pair_list<Class>)
-  void print(Class const& obj)
+  requires(detail::NamePairList<Class>) void print(Class const& obj)
   {
     for (auto& pair : obj)
     {
@@ -76,7 +72,7 @@ public:
   }
 
   template <typename Class, typename Decl>
-  inline void operator() (Class const& obj, Decl const& decl);
+  inline void operator()(Class const& obj, Decl const& decl);
 
 private:
   void begin()
@@ -101,13 +97,19 @@ public:
     i_other.moved = true;
   }
   array(array const& ostr) noexcept = delete;
-  explicit array(std::ostream& ostr) : json_ostream(ostr) { begin(); }
-  ~array() { end(); }
+  explicit array(std::ostream& ostr) : json_ostream(ostr)
+  {
+    begin();
+  }
+  ~array()
+  {
+    end();
+  }
 
   template <typename Class>
   void print(Class const& obj)
   {
-    for(auto const& each : obj)
+    for (auto const& each : obj)
     {
       using value_type = std::decay_t<decltype(each)>;
       if (!first)
@@ -146,19 +148,19 @@ void json_ostream::print(const Value& obj)
 {
   using value_type = std::decay_t<Value>;
 
-  if constexpr (detail::is_map_v<value_type>)
+  if constexpr (detail::IsMap<value_type>)
     json_ostream::object(ostr).print(obj);
-  else if constexpr (detail::is_array_v<value_type>)
+  else if constexpr (detail::IsArray<value_type>)
     json_ostream::array(ostr).print(obj);
-  else if constexpr (detail::is_float_v<value_type>)
+  else if constexpr (detail::IsFloat<value_type>)
     ostr << static_cast<double>(obj);
-  else if constexpr (detail::is_signed_v<value_type>)
+  else if constexpr (detail::IsSigned<value_type>)
     ostr << static_cast<std::int64_t>(obj);
-  else if constexpr (detail::is_unsigned_v<value_type>)
+  else if constexpr (detail::IsUnsigned<value_type>)
     ostr << static_cast<std::uint64_t>(obj);
-  else if constexpr (detail::is_bool_v<value_type>)
+  else if constexpr (detail::IsBool<value_type>)
     ostr << std::boolalpha << static_cast<bool>(obj);
-  else if constexpr (detail::is_string_v<value_type>)
+  else if constexpr (detail::IsString<value_type>)
     ostr << "\"" << detail::as_string(obj) << "\"";
 }
 
@@ -186,5 +188,4 @@ void json_ostream::object::operator()(Class const& obj, const Decl& decl)
   ostr << "\"" << decl.key() << "\": ";
   json_ostream::print(decl.value(obj));
 }
-
-}
+} // namespace jsb
