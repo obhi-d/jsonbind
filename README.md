@@ -1,6 +1,6 @@
 # Introduction
 
-This project aimed at supporting json streaming from C++ by using reflection like interface. 
+This project aims at supporting json streaming from C++ by using reflection like interface. 
 The project borrows ideas from MetaStuff (https://github.com/eliasdaler/MetaStuff.git) and uses C++20.
 
 # Features
