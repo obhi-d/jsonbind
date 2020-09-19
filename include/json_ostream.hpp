@@ -14,6 +14,8 @@ namespace jsb
 class json_ostream
 {
 public:
+  explicit json_ostream(std::ostream& i_ostr) noexcept : ostr(i_ostr) {}
+
   class array;
   class object;
 
@@ -26,7 +28,6 @@ public:
   json_ostream(json_ostream const&) noexcept = delete;
 
 protected:
-  explicit json_ostream(std::ostream& i_ostr) noexcept : ostr(i_ostr) {}
   json_ostream(json_ostream&& i_other) noexcept : ostr(i_other.ostr) {}
 
 protected:
@@ -165,17 +166,10 @@ void json_ostream::stream(const Value& obj)
 }
 
 template <typename Class>
-void stream_obj(std::ostream& ostr, Class const& obj)
+void stream_out(std::ostream& ostr, Class const& obj)
 {
-  json_ostream::object streamer(ostr);
-  streamer.stream(obj);
-}
-
-template <typename Class>
-void stream_array(std::ostream& ostr, Class const& obj)
-{
-  json_ostream::array streamer(ostr);
-  streamer.stream(obj);
+  if constexpr (detail::BoundClass<Class>)
+    json_ostream(ostr).stream(obj);
 }
 
 template <typename Class, typename Decl>

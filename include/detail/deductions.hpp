@@ -52,7 +52,7 @@ template <typename Class>
 inline constexpr std::size_t tuple_size = std::tuple_size_v<decl_t<Class>>;
 
 template <typename Class>
-concept BoundClass = tuple_size<Class> > 0;
+concept BoundClass = tuple_size<std::decay_t<Class>> > 0;
 
 template <typename Class, typename M>
 concept BoundMember = BoundClass<M>;
@@ -83,10 +83,10 @@ concept CastableFromString = requires
 };
 
 template <typename T>
-concept TransformFromString = requires(T t)
+concept TransformFromString = requires
 {
   {
-    jsb::from_string(std::string_view())
+    jsb::from_string<T>(std::string_view())
   }
   ->std::same_as<T>;
 };
@@ -115,15 +115,15 @@ concept IsString = StringType<T> || CastableToStringView<T> ||
 
 // Signed
 template <typename T>
-concept IsSigned = (std::IsSigned<T> && std::is_integral_v<T>) ||
+concept IsSigned = (std::is_signed_v<T> && std::is_integral_v<T>) ||
                    (std::is_enum_v<T> &&
-                    std::IsSigned<std::underlying_type_t<T>>);
+                    std::is_signed_v<std::underlying_type_t<T>>);
 
 // Unsigned
 template <typename T>
-concept IsUnsigned = (std::IsUnsigned<T> && std::is_integral_v<T>) ||
+concept IsUnsigned = (std::is_unsigned_v<T> && std::is_integral_v<T>) ||
                      (std::is_enum_v<T> &&
-                      std::IsUnsigned<std::underlying_type_t<T>>);
+                      std::is_unsigned_v<std::underlying_type_t<T>>);
 
 // Float
 template <typename T>
@@ -146,22 +146,29 @@ concept Itereable = requires(Class obj)
 };
 
 template <typename Class>
-using array_value_type = std::decay_t<decltype(*std::begin(Class()))>;
+using array_value_t = std::decay_t<decltype(*std::begin(Class()))>;
 
 template <typename Class>
-concept ArrayOfObjects = Itereable<Class>&& BoundClass<array_value_type<Class>>;
+concept ArrayOfObjects = Itereable<Class>&& BoundClass<array_value_t<Class>>;
 
 template <typename Class>
 concept ArrayOfValues = Itereable<Class> && !IsString<Class> &&
-                        IsSimpleValue<array_value_type<Class>>;
+                        IsSimpleValue<array_value_t<Class>>;
 
 template <typename Class>
 concept IsArray = ArrayOfObjects<Class> || ArrayOfValues<Class>;
+
+template <typename Class>
+concept HasValueType = requires(Class obj)
+{
+  typename Class::value_type;
+};
 
 // Map
 template <typename Class>
 concept ValuePairList = requires(Class obj)
 {
+  typename Class::value_type;
   (*std::begin(obj)).first;
   (*std::begin(obj)).second;
   (*std::end(obj)).first;
@@ -169,8 +176,49 @@ concept ValuePairList = requires(Class obj)
 };
 
 template <typename Class>
+concept HasReserve = requires(Class obj)
+{
+  obj.reserve(std::size_t());
+};
+
+template <typename Class>
+concept HasSize = requires(Class obj)
+{
+  {obj.size()} -> std::convertible_to<std::size_t>;
+};
+
+template <typename Class, typename ValueType>
+concept HasEmplace = requires(Class obj, ValueType value)
+{
+  obj.emplace(value);
+};
+
+template <typename Class, typename ValueType>
+concept HasPushBack = requires(Class obj, ValueType value)
+{
+  obj.push_back(value);
+};
+
+template <typename Class, typename ValueType>
+concept HasEmplaceBack = requires(Class obj, ValueType value)
+{
+  obj.emplace_back(value);
+};
+
+template <typename Class>
 concept NamePairList = ValuePairList<Class>&&
     IsString<std::decay_t<decltype((*std::begin(Class())).first)>>;
+
+template <typename Class>
+requires (HasValueType<Class>)
+using container_value_t = typename Class::value_type;
+
+template <typename Class>
+requires (NamePairList<Class>)
+using nvname_t = std::decay_t<decltype((*std::begin(Class())).first)>;
+template <typename Class>
+requires (NamePairList<Class>)
+using nvvalue_t = std::decay_t<decltype((*std::begin(Class())).second)>;
 
 template <typename Class>
 concept IsMap = NamePairList<Class> || BoundClass<Class>;
