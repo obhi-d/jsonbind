@@ -20,8 +20,8 @@ template <typename Class, typename M>
 class decl_base
 {
 public:
-  using ClassTy  = Class;
-  using MemTy    = M;
+  using ClassTy = Class;
+  using MemTy   = M;
 
   constexpr decl_base(std::string_view iName) : name(iName) {}
 
@@ -38,7 +38,6 @@ template <typename Class, typename M>
 class decl_member_ptr : public decl_base<Class, M>
 {
 public:
-
   constexpr decl_member_ptr(std::string_view iName, member_ptr<Class, M> iPtr)
       : decl_base<Class, M>(iName), member(iPtr)
   {
@@ -67,7 +66,6 @@ template <typename Class, typename M>
 class decl_get_set : public decl_base<Class, M>
 {
 public:
-
   constexpr decl_get_set(std::string_view iName, get_fn<Class, M> iGetter,
                          set_fn<Class, M> iSetter)
       : decl_base<Class, M>(iName), getter(iGetter), setter(iSetter)
@@ -93,12 +91,10 @@ template <typename Class, typename M>
 class decl_free_get_set : public decl_base<Class, M>
 {
 public:
-
-  constexpr decl_free_get_set(std::string_view            iName,
+  constexpr decl_free_get_set(std::string_view      iName,
                               free_get_fn<Class, M> iGetter,
                               free_set_fn<Class, M> iSetter)
-      : decl_base<Class, M>(iName), free_getter(iGetter),
-        free_setter(iSetter)
+      : decl_base<Class, M>(iName), free_getter(iGetter), free_setter(iSetter)
   {
   }
 
@@ -117,40 +113,39 @@ protected:
   free_set_fn<Class, M> free_setter = nullptr;
 };
 
-
 template <typename Class>
 auto const& get_decl()
 {
-  static const auto json_bind_ = decl<Class>();
+  static const auto json_bind_ = decl<std::decay_t<Class>>();
   return json_bind_;
 }
 
 template <typename TupleTy, typename Class, typename Fn, size_t... I>
-void apply(Fn&& fn, Class& obj, TupleTy&& tup, std::index_sequence<I...>)
+void apply_set(Fn&& fn, Class& obj, TupleTy&& tup, std::index_sequence<I...>)
 {
   (fn(obj, std::get<I>(tup)), ...);
 }
 
 template <typename TupleTy, typename Class, typename Fn, size_t... I>
-void apply(Fn&& fn, Class const& obj, TupleTy&& tup, std::index_sequence<I...>)
+void apply_get(Fn&& fn, Class const& obj, TupleTy&& tup,
+               std::index_sequence<I...>)
 {
   (fn(obj, std::get<I>(tup)), ...);
 }
 
 template <typename Class, typename Fn>
-void for_all(Fn&& fn, Class& obj)
+void set_all(Fn&& fn, Class& obj)
 {
-  apply(std::forward<Fn>(fn), obj, get_decl<Class>(),
-        std::make_index_sequence<tuple_size<Class>>());
+  apply_set(std::forward<Fn>(fn), obj, get_decl<Class>(),
+            std::make_index_sequence<tuple_size<Class>>());
 }
 
 template <typename Class, typename Fn>
-void for_all(Fn&& fn, Class const& obj)
+void get_all(Fn&& fn, Class const& obj)
 {
-  apply(std::forward<Fn>(fn), obj, get_decl<Class>(),
-        std::make_index_sequence<tuple_size<Class>>());
+  apply_get(std::forward<Fn>(fn), obj, get_decl<Class>(),
+            std::make_index_sequence<tuple_size<Class>>());
 }
-
 
 } // namespace detail
 

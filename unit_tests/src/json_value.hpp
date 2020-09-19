@@ -32,22 +32,24 @@ inline bool jv_valid(nlohmann::json const& val)
   return !val.is_null();
 }
 // Iterator
-template <typename Lambda> inline void jv_map_for_each(nlohmann::json const& val, Lambda&& l)
+template <typename Lambda>
+inline void jv_map_for_each(nlohmann::json const& val, Lambda&& l)
 {
   if (val.is_object())
   {
-    for(auto it = val.begin(); it != val.end(); ++it)
+    for (auto it = val.begin(); it != val.end(); ++it)
     {
       auto const& kt = it.key();
       l(std::string_view(kt.c_str(), kt.length()), it.value());
     }
   }
 }
-template <typename Lambda> inline void jv_array_for_each(nlohmann::json const& val, Lambda&& l)
+template <typename Lambda>
+inline void jv_array_for_each(nlohmann::json const& val, Lambda&& l)
 {
   if (val.is_array())
   {
-    for(auto it = val.begin(); it != val.end(); ++it)
+    for (auto it = val.begin(); it != val.end(); ++it)
     {
       nlohmann::json const& el = *it;
       l(el);
@@ -57,7 +59,7 @@ template <typename Lambda> inline void jv_array_for_each(nlohmann::json const& v
 // Float
 inline double jv_float(nlohmann::json const& val)
 {
-  if(val.is_number_float())
+  if (val.is_number_float())
   {
     return val.get<double>();
   }
@@ -66,7 +68,7 @@ inline double jv_float(nlohmann::json const& val)
 // Signed
 inline std::int64_t jv_signed(nlohmann::json const& val)
 {
-  if(val.is_number())
+  if (val.is_number())
   {
     return val.get<std::int64_t>();
   }
@@ -74,11 +76,12 @@ inline std::int64_t jv_signed(nlohmann::json const& val)
   {
     return static_cast<std::int64_t>(val.get<std::uint64_t>());
   }
+  return 0;
 }
 // Unsigned
 inline std::uint64_t jv_unsigned(nlohmann::json const& val)
 {
-  if(val.is_number_unsigned())
+  if (val.is_number_unsigned())
   {
     return val.get<std::uint64_t>();
   }
@@ -86,6 +89,7 @@ inline std::uint64_t jv_unsigned(nlohmann::json const& val)
   {
     return static_cast<std::uint64_t>(val.get<std::int64_t>());
   }
+  return 0;
 }
 // Bool
 inline bool jv_bool(nlohmann::json const& val)
@@ -117,4 +121,4 @@ inline auto jv_key(std::string_view key, nlohmann::json const& val)
   return jv_null();
 }
 
-}
+} // namespace jsb

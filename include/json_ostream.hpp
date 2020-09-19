@@ -56,7 +56,7 @@ public:
   template <typename Class>
   requires(detail::BoundClass<Class>) void stream(Class const& obj)
   {
-    detail::for_all<Class>(*this, obj);
+    detail::get_all<Class>(*this, obj);
   }
 
   template <typename Class>
@@ -168,8 +168,7 @@ void json_ostream::stream(const Value& obj)
 template <typename Class>
 void stream_out(std::ostream& ostr, Class const& obj)
 {
-  if constexpr (detail::BoundClass<Class>)
-    json_ostream(ostr).stream(obj);
+  json_ostream(ostr).stream(obj);
 }
 
 template <typename Class, typename Decl>

@@ -45,11 +45,12 @@ using free_set_fn = void (*)(Class&, ValType);
 // Concepts
 // Decl
 template <typename Class>
-using decl_t = std::decay_t<decltype(decl<Class>())>;
+using decl_t = std::decay_t<decltype(decl<std::decay_t<Class>>())>;
 
 // Utils
 template <typename Class>
-inline constexpr std::size_t tuple_size = std::tuple_size_v<decl_t<Class>>;
+inline constexpr std::size_t tuple_size =
+    std::tuple_size_v<decl_t<std::decay_t<Class>>>;
 
 template <typename Class>
 concept BoundClass = tuple_size<std::decay_t<Class>> > 0;
@@ -152,8 +153,8 @@ template <typename Class>
 concept ArrayOfObjects = Itereable<Class>&& BoundClass<array_value_t<Class>>;
 
 template <typename Class>
-concept ArrayOfValues = Itereable<Class> && !IsString<Class> &&
-                        IsSimpleValue<array_value_t<Class>>;
+concept ArrayOfValues =
+    Itereable<Class> && !IsString<Class> && IsSimpleValue<array_value_t<Class>>;
 
 template <typename Class>
 concept IsArray = ArrayOfObjects<Class> || ArrayOfValues<Class>;
@@ -168,7 +169,6 @@ concept HasValueType = requires(Class obj)
 template <typename Class>
 concept ValuePairList = requires(Class obj)
 {
-  typename Class::value_type;
   (*std::begin(obj)).first;
   (*std::begin(obj)).second;
   (*std::end(obj)).first;
@@ -176,7 +176,7 @@ concept ValuePairList = requires(Class obj)
 };
 
 template <typename Class>
-concept HasReserve = requires(Class obj)
+concept HasReserve = requires(std::decay_t<Class> obj)
 {
   obj.reserve(std::size_t());
 };
@@ -184,7 +184,10 @@ concept HasReserve = requires(Class obj)
 template <typename Class>
 concept HasSize = requires(Class obj)
 {
-  {obj.size()} -> std::convertible_to<std::size_t>;
+  {
+    obj.size()
+  }
+  ->std::convertible_to<std::size_t>;
 };
 
 template <typename Class, typename ValueType>
@@ -210,15 +213,15 @@ concept NamePairList = ValuePairList<Class>&&
     IsString<std::decay_t<decltype((*std::begin(Class())).first)>>;
 
 template <typename Class>
-requires (HasValueType<Class>)
-using container_value_t = typename Class::value_type;
+requires(HasValueType<Class>) using container_value_t =
+    typename Class::value_type;
 
 template <typename Class>
-requires (NamePairList<Class>)
-using nvname_t = std::decay_t<decltype((*std::begin(Class())).first)>;
+requires(NamePairList<Class>) using nvname_t =
+    std::decay_t<decltype((*std::begin(Class())).first)>;
 template <typename Class>
-requires (NamePairList<Class>)
-using nvvalue_t = std::decay_t<decltype((*std::begin(Class())).second)>;
+requires(NamePairList<Class>) using nvvalue_t =
+    std::decay_t<decltype((*std::begin(Class())).second)>;
 
 template <typename Class>
 concept IsMap = NamePairList<Class> || BoundClass<Class>;
