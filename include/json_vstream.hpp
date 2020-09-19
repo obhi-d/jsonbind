@@ -7,28 +7,31 @@
 
 namespace jsb
 {
+template <typename> struct json_value_wrapper;
+
 // returns an object if this value represents an object, or a null json_value
-// auto const& jv_object(auto const&);
+// template <typename V, typename R> R const& object(V const&);
 // returns an object if this value represents an object, or a null json_value
-// auto const& jv_array(auto const&);
+// template <typename V, typename R> R const& array(V const&);
 // returns true if json_value_type is valid
-// bool jv_valid(auto const&);
+// template <typename V> bool valid(V const &);
 // Iterator
-// void jv_map_for_each(auto const&, auto&&);
+// template <typename V, typename R> void map_for_each(V const&, R&&);
 // Iterator
-// void jv_array_for_each(auto const&, auto&&);
+// template <typename V, typename R> void array_for_each(V const&, R&&);
 // Float
-// auto jv_float(auto const&);
+// template <typename V> double as_float(V const&);
 // Signed
-// auto jv_signed(auto const&);
+// template <typename V> std::int64_t as_signed(V const&);
 // Unsigned
-// auto jv_unsigned(auto const&);
+// template <typename V> std::uint64_t as_unsigned(V const&);
 // Bool
-// auto jv_bool(auto const&);
+// Unsigned
+// template <typename V> bool as_bool(V const&);
 // String
-// auto jv_string(auto const&);
+// template <typename V> std::string_view as_string(V const&);
 // Key, return a JsonValue const& object given a key and a map
-// auto jv_key(std::string_view key, auto const& map);
+// template <typename V, typename R> R const& key(std::string_view key, V const& map);
 
 // json_value from a given API is transformed into
 // a bound class using this interface
@@ -37,6 +40,7 @@ class json_vstream
 {
 public:
   using json_value = JsonValue;
+  using jv = json_value_wrapper<json_value>;
   class array;
   class object;
 
@@ -79,8 +83,8 @@ public:
   template <typename Class>
   requires(detail::NamePairList<Class>) void stream(Class& obj)
   {
-    auto const& jv = jv_object(value);
-    if (!jv_valid(jv))
+    auto const& jv = jv::object(value);
+    if (!jv::valid(jv))
     {
       return;
     }
@@ -90,7 +94,7 @@ public:
 
     detail::reserve(obj, detail::size(jv));
 
-    jv_map_for_each(jv, [&obj](std::string_view key, JsonValue const& value) {
+    jv::map_for_each(jv, [&obj](std::string_view key, JsonValue const& value) {
       nvvalue_t stream_val;
       json_vstream<JsonValue>(value).stream(stream_val);
       if constexpr (detail::IsString<nvname_t> ||
@@ -125,14 +129,14 @@ public:
   template <typename Class>
   void stream(Class& obj)
   {
-    auto const& jv = jv_array(value);
-    if (!jv_valid(jv))
+    auto const& jv = jv::array(value);
+    if (!jv::valid(jv))
     {
       return;
     }
 
     detail::reserve(obj, detail::size(jv));
-    jv_array_for_each(jv, [&obj](JsonValue const& value) {
+    jv::array_for_each(jv, [&obj](JsonValue const& value) {
       detail::array_value_t<Class> stream_val;
       json_vstream<JsonValue>(value).stream(stream_val);
       detail::emplace(obj, std::move(stream_val));
@@ -165,29 +169,29 @@ void json_vstream<JsonValue>::stream(Value& obj)
   else if constexpr (detail::IsArray<value_type>)
     json_vstream<JsonValue>::array(value).stream(obj);
   else if constexpr (detail::IsFloat<value_type>)
-    obj = static_cast<value_type>(jv_float(value));
+    obj = static_cast<value_type>(jv::as_float(value));
   else if constexpr (detail::IsSigned<value_type>)
-    obj = static_cast<value_type>(jv_signed(value));
+    obj = static_cast<value_type>(jv::as_signed(value));
   else if constexpr (detail::IsUnsigned<value_type>)
-    obj = static_cast<value_type>(jv_unsigned(value));
+    obj = static_cast<value_type>(jv::as_unsigned(value));
   else if constexpr (detail::IsBool<value_type>)
-    obj = static_cast<value_type>(jv_bool(value));
+    obj = static_cast<value_type>(jv::as_bool(value));
   else if constexpr (detail::IsString<value_type>)
-    obj = value_type(jv_string(value));
+    obj = value_type(jv::as_string(value));
 }
 
 template <typename JsonValue, typename Class>
 void stream_in(JsonValue const& jvalue, Class& obj)
 {
-  json_vstream<JsonValue>(jvalue).stream<Class>(obj);
+  json_vstream<JsonValue>(jvalue).template stream<Class>(obj);
 }
 
 template <typename JsonValue>
 template <typename Class, typename Decl>
 void json_vstream<JsonValue>::object::operator()(Class& obj, Decl const& decl)
 {
-  auto const& key_val = jv_key(decl.key(), value);
-  if (jv_valid(key_val))
+  auto const& key_val = jv::key(decl.key(), value);
+  if (jv::valid(key_val))
   {
     using value_t = typename Decl::MemTy;
     value_t load;

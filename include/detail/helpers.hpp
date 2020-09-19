@@ -33,21 +33,21 @@ requires(!detail::StringType<T> && !detail::CastableToStringView<T> &&
 }
 
 template <typename C, typename...Args>
-requires(detail::HasValueType<C> && detail::HasEmplace<C, container_value_t<C>>)
+requires(detail::HasValueType<C> && detail::HasEmplace<C, container_value_t<C>> && !detail::HasEmplaceBack<C, container_value_t<C>>)
 static void emplace(C& c, Args&&...args)
 {
   c.emplace(std::forward<Args>(args)...);
 }
 
 template <typename C, typename...Args>
-requires(detail::HasValueType<C> && detail::HasEmplaceBack<C, container_value_t<C>>)
+requires(detail::HasValueType<C> && !detail::HasEmplace<C, container_value_t<C>> && detail::HasEmplaceBack<C, container_value_t<C>>)
 static void emplace(C& c, Args&&...args)
 {
   c.emplace_back(std::forward<Args>(args)...);
 }
 
 template <typename C, typename...Args>
-requires(detail::HasValueType<C> && !detail::HasEmplaceBack<C, container_value_t<C>> && detail::HasPushBack<C, container_value_t<C>>)
+requires(detail::HasValueType<C> && !detail::HasEmplace<C, container_value_t<C>> && !detail::HasEmplaceBack<C, container_value_t<C>> && detail::HasPushBack<C, container_value_t<C>>)
 static void emplace(C& c, Args&&...args)
 {
   c.push_back(std::forward<Args>(args)...);

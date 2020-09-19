@@ -10,6 +10,7 @@
 #include <map>
 #include <sstream>
 #include <vector>
+#include <list>
 #define CATCH_CONFIG_MAIN // This tells Catch to provide a main() - only do this
                           // in one cpp file
 #include <catch2/catch.hpp>
@@ -67,13 +68,6 @@ auto decl<complex>()
                    jsb::bind<&complex::map>("map"));
 }
 } // namespace jsb
-#include <iostream>
-template <typename JsonValue, typename Class>
-void v_stream_in(JsonValue const& jvalue, Class& obj)
-{
-  std::cout << typeid(obj).name() << std::endl;
-  // json_vstream<JsonValue>(jvalue).stream(obj);
-}
 
 TEST_CASE("Simple test", "[validity]")
 {

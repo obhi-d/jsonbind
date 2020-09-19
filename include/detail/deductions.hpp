@@ -98,15 +98,6 @@ inline constexpr std::size_t tuple_size =
 template <typename Class>
 concept BoundClass = tuple_size<std::decay_t<Class>> > 0;
 
-template <typename Class, typename M>
-concept BoundMember = BoundClass<M>;
-
-template <auto G>
-concept HasClassType = requires
-{
-  typename G::class_t;
-};
-
 template <auto MPtr>
 concept IsMemberPtr = requires
 {
