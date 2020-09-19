@@ -63,6 +63,14 @@ inline double jv_float(nlohmann::json const& val)
   {
     return val.get<double>();
   }
+  if (val.is_number())
+  {
+    return static_cast<double>(val.get<std::int64_t>());
+  }
+  if (val.is_number_unsigned())
+  {
+    return static_cast<double>(val.get<std::uint64_t>());
+  }
   return 0.0;
 }
 // Signed

@@ -26,9 +26,29 @@ Bindings are expected to be declared inside namespace jsb. Example binding is gi
 ```cpp
 struct test
 {
-  int         value = 0;
+  int         value  = 0;
+  float       fvalue = 0;
+  bool        bvalue = 0;
+  unsigned    uvalue = 0;
   std::string name;
 
+  test()
+  {
+    value  = std::rand();
+    fvalue = (float)(int)((float)std::rand() * 10000.0f / (float)RAND_MAX);
+    bvalue = (float)std::rand() / (float)RAND_MAX > 0.5f;
+    uvalue = (unsigned)std::rand();
+    name   = "SuffixNum" + std::to_string(std::rand());
+  }
+
+  float get_fvalue() const
+  {
+    return (float)(int)fvalue;
+  }
+  void set_fvalue(float v)
+  {
+    fvalue = v;
+  }
   auto operator<=>(test const&) const = default;
 };
 
@@ -44,14 +64,17 @@ namespace jsb
 template <>
 auto decl<test>()
 {
-  return json_bind(bind("value", &test::value),
-                   bind("name", &test::name));
+  return json_bind(jsb::bind<&test::value>("value"),
+                   jsb::bind<&test::get_fvalue, &test::set_fvalue>("fvalue"),
+                   jsb::bind<&test::bvalue>("bvalue"),
+                   jsb::bind<&test::uvalue>("uvalue"),
+                   jsb::bind<&test::name>("name"));
 }
 template <>
 auto decl<complex>()
 {
-  return json_bind(bind("array", &complex::array),
-                   bind("map", &complex::map));
+  return json_bind(jsb::bind<&complex::array>("array"),
+                   jsb::bind<&complex::map>("map"));
 }
 } // namespace jsb
 ```

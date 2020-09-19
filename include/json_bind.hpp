@@ -20,8 +20,8 @@ template <typename Class, typename M>
 class decl_base
 {
 public:
-  using ClassTy = Class;
-  using MemTy   = M;
+  using ClassTy = std::decay_t<Class>;
+  using MemTy   = std::decay_t<M>;
 
   constexpr decl_base(std::string_view iName) : name(iName) {}
 
@@ -34,83 +34,78 @@ private:
   std::string_view name = nullptr;
 };
 
-template <typename Class, typename M>
-class decl_member_ptr : public decl_base<Class, M>
+template <typename Class, auto MPtr>
+class decl_member_ptr
+    : public decl_base<Class, typename detail::member_ptr_t<MPtr>::member_t>
 {
 public:
-  constexpr decl_member_ptr(std::string_view iName, member_ptr<Class, M> iPtr)
-      : decl_base<Class, M>(iName), member(iPtr)
+  using base_t =
+      decl_base<Class, typename detail::member_ptr_t<MPtr>::member_t>;
+  using M = typename base_t::MemTy;
+
+  constexpr decl_member_ptr(std::string_view iName) : decl_base<Class, M>(iName)
   {
   }
 
   inline void value(Class& obj, M const& value) const
   {
-    obj.*member = value;
+    obj.*MPtr = value;
   }
 
   inline void value(Class& obj, M&& value) const
   {
-    obj.*member = std::move(value);
+    obj.*MPtr = std::move(value);
   }
 
   M const& value(Class const& obj) const
   {
-    return (obj.*member);
+    return (obj.*MPtr);
   }
-
-protected:
-  member_ptr<Class, M> member = nullptr;
 };
 
-template <typename Class, typename M>
-class decl_get_set : public decl_base<Class, M>
+template <typename Class, auto Getter, auto Setter>
+class decl_get_set
+    : public decl_base<Class,
+                       typename detail::member_getter_t<Getter>::return_t>
 {
 public:
-  constexpr decl_get_set(std::string_view iName, get_fn<Class, M> iGetter,
-                         set_fn<Class, M> iSetter)
-      : decl_base<Class, M>(iName), getter(iGetter), setter(iSetter)
+  using base_t =
+      decl_base<Class, typename detail::member_getter_t<Getter>::return_t>;
+  using M = typename base_t::MemTy;
+
+  constexpr decl_get_set(std::string_view iName) : base_t(iName) {}
+
+  inline void value(Class& obj, M&& value) const
   {
+    (obj.*Setter)(std::move(value));
   }
 
-  inline void value(Class& obj, M const& value) const
+  auto value(Class const& obj) const
   {
-    (obj.*setter)(value);
+    return ((obj.*Getter)());
   }
-
-  M const& value(Class const& obj) const
-  {
-    return ((obj.*getter)());
-  }
-
-protected:
-  get_fn<Class, M> getter = nullptr;
-  set_fn<Class, M> setter = nullptr;
 };
 
-template <typename Class, typename M>
-class decl_free_get_set : public decl_base<Class, M>
+template <typename Class, auto Getter, auto Setter>
+class decl_free_get_set
+    : public decl_base<Class, typename detail::free_getter_t<Getter>::return_t>
 {
 public:
-  constexpr decl_free_get_set(std::string_view      iName,
-                              free_get_fn<Class, M> iGetter,
-                              free_set_fn<Class, M> iSetter)
-      : decl_base<Class, M>(iName), free_getter(iGetter), free_setter(iSetter)
-  {
-  }
+  using base_t =
+      decl_base<Class, typename detail::free_getter_t<Getter>::return_t>;
+  using M = typename base_t::MemTy;
+
+  constexpr decl_free_get_set(std::string_view iName) : base_t(iName) {}
 
   void value(Class& obj, M const& value) const
   {
-    free_setter(obj, value);
+    (*Setter)(obj, value);
   }
 
-  M const& value(Class const& obj) const
+  auto value(Class const& obj) const
   {
-    return free_getter(obj);
+    return (*Getter)(obj);
   }
-
-protected:
-  free_get_fn<Class, M> free_getter = nullptr;
-  free_set_fn<Class, M> free_setter = nullptr;
 };
 
 template <typename Class>
@@ -149,25 +144,27 @@ void get_all(Fn&& fn, Class const& obj)
 
 } // namespace detail
 
-template <typename Class, typename M>
-constexpr auto bind(std::string_view iName, detail::member_ptr<Class, M> iPtr)
+template <auto MPtr>
+requires(detail::IsMemberPtr<MPtr>) constexpr auto bind(std::string_view iName)
 {
-  return detail::decl_member_ptr<Class, M>(iName, iPtr);
+  return detail::decl_member_ptr<typename detail::member_ptr_t<MPtr>::class_t,
+                                 MPtr>(iName);
 }
 
-template <typename Class, typename M>
-constexpr auto bind(std::string_view iName, detail::get_fn<Class, M> iGetter,
-                    detail::set_fn<Class, M> iSetter)
+template <auto Getter, auto Setter>
+requires(detail::IsMemberGetterSetter<Getter, Setter>) constexpr auto bind(
+    std::string_view iName)
 {
-  return detail::decl_get_set<Class, M>(iName, iGetter, iSetter);
+  return detail::decl_get_set<typename detail::member_getter_t<Getter>::class_t,
+                              Getter, Setter>(iName);
 }
 
-template <typename Class, typename M>
-constexpr auto bind(std::string_view              iName,
-                    detail::free_get_fn<Class, M> iGetter,
-                    detail::free_set_fn<Class, M> iSetter)
+template <auto Getter, auto Setter>
+requires(detail::IsFreeGetterSetter<Getter, Setter>) constexpr auto bind(
+    std::string_view iName)
 {
-  return detail::decl_free_get_set<Class, M>(iName, iGetter, iSetter);
+  return detail::decl_free_get_set<
+      typename detail::free_getter_t<Getter>::class_t, Getter, Setter>(iName);
 }
 
 template <typename... Args>

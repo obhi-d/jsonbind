@@ -2,6 +2,7 @@
 // Created by obhi on 9/17/20.
 //
 #include "json_value.hpp"
+#include <cstdlib>
 #include <iostream>
 #include <json_bind.hpp>
 #include <json_ostream.hpp>
@@ -15,9 +16,29 @@
 
 struct test
 {
-  int         value = 0;
+  int         value  = 0;
+  float       fvalue = 0;
+  bool        bvalue = 0;
+  unsigned    uvalue = 0;
   std::string name;
 
+  test()
+  {
+    value  = std::rand();
+    fvalue = (float)(int)((float)std::rand() * 10000.0f / (float)RAND_MAX);
+    bvalue = (float)std::rand() / (float)RAND_MAX > 0.5f;
+    uvalue = (unsigned)std::rand();
+    name   = "SuffixNum" + std::to_string(std::rand());
+  }
+
+  float get_fvalue() const
+  {
+    return (float)(int)fvalue;
+  }
+  void set_fvalue(float v)
+  {
+    fvalue = v;
+  }
   auto operator<=>(test const&) const = default;
 };
 
@@ -33,14 +54,17 @@ namespace jsb
 template <>
 auto decl<test>()
 {
-  return json_bind(jsb::bind("value", &test::value),
-                   jsb::bind("name", &test::name));
+  return json_bind(jsb::bind<&test::value>("value"),
+                   jsb::bind<&test::get_fvalue, &test::set_fvalue>("fvalue"),
+                   jsb::bind<&test::bvalue>("bvalue"),
+                   jsb::bind<&test::uvalue>("uvalue"),
+                   jsb::bind<&test::name>("name"));
 }
 template <>
 auto decl<complex>()
 {
-  return json_bind(jsb::bind("array", &complex::array),
-                   jsb::bind("map", &complex::map));
+  return json_bind(jsb::bind<&complex::array>("array"),
+                   jsb::bind<&complex::map>("map"));
 }
 } // namespace jsb
 #include <iostream>
@@ -54,38 +78,24 @@ void v_stream_in(JsonValue const& jvalue, Class& obj)
 TEST_CASE("Simple test", "[validity]")
 {
   test outp;
-  outp.value = 1;
-  outp.name  = "One";
 
   std::stringstream ss;
   jsb::stream_out(ss, outp);
   auto jv = nlohmann::json::parse(ss);
-  REQUIRE(jv.find("name") != jv.end());
-  REQUIRE(jv.find("value") != jv.end());
 
   test inp;
   jsb::stream_in(jv, inp);
 
-  REQUIRE(outp.value == inp.value);
-  REQUIRE(outp.name == inp.name);
+  REQUIRE(outp == inp);
 }
 
 TEST_CASE("Array test", "[validity]")
 {
-  test obj;
-  obj.value = 1;
-  obj.name  = "1";
   std::list<test> write;
-  write.push_back(obj);
-  obj.value = 2;
-  obj.name  = "2";
-  write.push_back(obj);
-  obj.value = 3;
-  obj.name  = "3";
-  write.push_back(obj);
-  obj.value = 4;
-  obj.name  = "4";
-  write.push_back(obj);
+  write.push_back(test());
+  write.push_back(test());
+  write.push_back(test());
+  write.push_back(test());
 
   std::stringstream ss;
   jsb::stream_out(ss, write);
@@ -98,20 +108,11 @@ TEST_CASE("Array test", "[validity]")
 
 TEST_CASE("Nested type test", "[validity]")
 {
-  test obj;
-  obj.value = 1;
-  obj.name  = "1";
   complex write, read;
-  write.array.push_back(obj);
-  obj.value = 2;
-  obj.name  = "2";
-  write.array.push_back(obj);
-  obj.value = 3;
-  obj.name  = "3";
-  write.array.push_back(obj);
-  obj.value = 4;
-  obj.name  = "4";
-  write.array.push_back(obj);
+  write.array.push_back(test());
+  write.array.push_back(test());
+  write.array.push_back(test());
+  write.array.push_back(test());
 
   write.map = {
       {"first", 1},

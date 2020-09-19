@@ -31,16 +31,59 @@ auto decl()
 namespace detail
 {
 // Types
-template <typename Class, typename M>
-using member_ptr = M Class::*;
-template <typename Class, typename ValType>
-using get_fn = ValType (Class::*)() const;
-template <typename Class, typename ValType>
-using free_get_fn = ValType (*)(Class const&);
-template <typename Class, typename ValType>
-using set_fn = void (Class::*)(ValType);
-template <typename Class, typename ValType>
-using free_set_fn = void (*)(Class&, ValType);
+template <auto>
+struct member_ptr_t;
+
+template <typename T, typename M, M T::*P>
+struct member_ptr_t<P>
+{
+  using class_t  = std::decay_t<T>;
+  using member_t = std::decay_t<M>;
+};
+
+template <auto>
+struct member_getter_t;
+
+template <typename T, typename R, R (T::*MF)() const>
+struct member_getter_t<MF>
+{
+  using class_t  = std::decay_t<T>;
+  using return_t = R;
+  using value_t  = std::decay_t<R>;
+};
+
+template <auto>
+struct member_setter_t;
+
+template <typename T, typename R, void (T::*MF)(R)>
+struct member_setter_t<MF>
+{
+  using class_t  = std::decay_t<T>;
+  using return_t = R;
+  using value_t  = std::decay_t<R>;
+};
+
+template <auto>
+struct free_getter_t;
+
+template <typename T, typename R, R (*F)(T const&)>
+struct free_getter_t<F>
+{
+  using class_t  = std::decay_t<T>;
+  using return_t = R;
+  using value_t  = std::decay_t<R>;
+};
+
+template <auto>
+struct free_setter_t;
+
+template <typename T, typename R, void (*F)(T&, R)>
+struct free_setter_t<F>
+{
+  using class_t  = std::decay_t<T>;
+  using return_t = R;
+  using value_t  = std::decay_t<R>;
+};
 
 // Concepts
 // Decl
@@ -57,6 +100,37 @@ concept BoundClass = tuple_size<std::decay_t<Class>> > 0;
 
 template <typename Class, typename M>
 concept BoundMember = BoundClass<M>;
+
+template <auto G>
+concept HasClassType = requires
+{
+  typename G::class_t;
+};
+
+template <auto MPtr>
+concept IsMemberPtr = requires
+{
+  typename member_ptr_t<MPtr>::class_t;
+  typename member_ptr_t<MPtr>::member_t;
+};
+
+template <auto Getter, auto Setter>
+concept IsMemberGetterSetter = requires
+{
+  typename member_getter_t<Getter>::return_t;
+  typename member_getter_t<Getter>::class_t;
+  typename member_setter_t<Setter>::return_t;
+  typename member_setter_t<Setter>::class_t;
+};
+
+template <auto Getter, auto Setter>
+concept IsFreeGetterSetter = requires
+{
+  typename free_getter_t<Getter>::return_t;
+  typename free_getter_t<Getter>::class_t;
+  typename free_setter_t<Setter>::return_t;
+  typename free_setter_t<Setter>::class_t;
+};
 
 // Strings
 template <typename T>
