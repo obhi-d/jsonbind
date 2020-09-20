@@ -125,10 +125,43 @@ concept IsFreeGetterSetter = requires
 
 // Strings
 template <typename T>
-concept StringType =
+concept IsBasicString =
     std::is_same_v<std::string, T> || std::is_same_v<std::string_view, T> ||
     std::is_same_v<std::string, T> || std::is_same_v<char*, T> ||
     std::is_same_v<char const*, T>;
+
+template <typename Class>
+concept IsSmartPointer = requires(Class o)
+{
+  typename Class::element_type;
+  (bool)o;
+  {
+    (*o)
+  }
+  ->std::same_as<std::add_lvalue_reference_t<typename Class::element_type>>;
+  {
+    o.operator->()
+  }
+  ->std::same_as<typename Class::element_type*>;
+};
+
+template <typename Class>
+concept IsBasicPointer = std::is_pointer_v<Class> && !IsBasicString<Class>;
+
+template <typename Class>
+concept IsPointer = IsBasicPointer<Class> || IsSmartPointer<Class>;
+
+template <typename T>
+constexpr auto pointer_class_type()
+{
+  if constexpr (IsBasicPointer<T>)
+    return std::decay_t<std::remove_pointer_t<std::remove_cv_t<T>>>();
+  else if constexpr (IsSmartPointer<T>)
+    return std::decay_t<std::remove_cv_t<typename T::element_type>>();
+}
+
+template <typename T>
+using pointer_class_t = decltype(pointer_class_type<T>());
 
 template <typename T>
 concept CastableToStringView = requires(T t)
@@ -176,7 +209,7 @@ concept TransformToString = requires(T t)
 };
 
 template <typename T>
-concept IsString = StringType<T> || CastableToStringView<T> ||
+concept IsString = IsBasicString<T> || CastableToStringView<T> ||
                    ConvertibleToString<T> || TransformToString<T>;
 
 // Signed

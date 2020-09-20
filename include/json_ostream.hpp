@@ -153,6 +153,13 @@ void json_ostream::stream(const Value& obj)
     json_ostream::object(ostr).stream(obj);
   else if constexpr (detail::IsArray<value_type>)
     json_ostream::array(ostr).stream(obj);
+  else if constexpr (detail::IsPointer<value_type>)
+  {
+    if (!obj)
+      ostr << "null";
+    else
+      stream(*obj);
+  }
   else if constexpr (detail::IsFloat<value_type>)
     ostr << static_cast<double>(obj);
   else if constexpr (detail::IsSigned<value_type>)
