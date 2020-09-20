@@ -10,6 +10,7 @@
 #include <list>
 #include <map>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <vector>
 #define CATCH_CONFIG_MAIN // This tells Catch to provide a main() - only do this
@@ -124,7 +125,8 @@ TEST_CASE("Nested type test", "[validity]")
 
 struct pointer_test
 {
-  test*                 basic = nullptr;
+  test*                 basic   = nullptr;
+  int*                  nullval = nullptr;
   std::unique_ptr<test> unique;
   std::shared_ptr<test> shared;
 
@@ -141,6 +143,7 @@ template <>
 auto decl<pointer_test>()
 {
   return jsb::json_bind(jsb::bind<&pointer_test::basic>("basic"),
+                        jsb::bind<&pointer_test::nullval>("nullval"),
                         jsb::bind<&pointer_test::unique>("unique"),
                         jsb::bind<&pointer_test::shared>("shared"));
 }
@@ -161,6 +164,62 @@ TEST_CASE("Pointer test", "[validity]")
   REQUIRE(read.unique.get() != nullptr);
   REQUIRE(read.shared.get() != nullptr);
   REQUIRE(*read.basic == *write.basic);
+  REQUIRE(read.nullval == write.nullval);
   REQUIRE(*read.unique == *write.unique);
   REQUIRE(*read.shared == *write.shared);
+}
+
+struct optional_test
+{
+  std::optional<int>  set = std::rand();
+  std::optional<int>  not_set;
+  std::optional<test> set_obj = std::move(test());
+  std::optional<test> not_set_obj;
+
+  bool operator==(optional_test const& other) const
+  {
+    if (set.has_value() != other.set.has_value())
+      return false;
+    if (not_set.has_value() != other.not_set.has_value())
+      return false;
+    if (set_obj.has_value() != other.set_obj.has_value())
+      return false;
+    if (not_set_obj.has_value() != other.not_set_obj.has_value())
+      return false;
+
+    if (set.has_value() && *set != *other.set)
+      return false;
+    if (not_set.has_value() && *not_set != *other.not_set)
+      return false;
+    if (set_obj.has_value() && *set_obj != *other.set_obj)
+      return false;
+    if (not_set_obj.has_value() && *not_set_obj != *other.not_set_obj)
+      return false;
+    return true;
+  }
+};
+
+namespace jsb
+{
+template <>
+auto decl<optional_test>()
+{
+  return jsb::json_bind(jsb::bind<&optional_test::set>("set"),
+                        jsb::bind<&optional_test::not_set>("not_set"),
+                        jsb::bind<&optional_test::set_obj>("set_obj"),
+                        jsb::bind<&optional_test::not_set_obj>("not_set_obj"));
+}
+} // namespace jsb
+
+TEST_CASE("Optional test", "[validity]")
+{
+  optional_test write, read;
+
+  std::stringstream ss;
+  jsb::stream_out(ss, write);
+
+  auto jv = nlohmann::json::parse(ss);
+  jsb::stream_in(jv, read);
+
+  REQUIRE(read == write);
 }

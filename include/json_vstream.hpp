@@ -183,6 +183,17 @@ void json_vstream<JsonValue>::stream(Value& obj)
       stream(*obj);
     }
   }
+  else if constexpr (detail::IsOptional<value_type>)
+  {
+    if (!jv::valid(value))
+      obj.reset();
+    else
+    {
+      detail::optional_t<value_type> storage;
+      stream(storage);
+      obj = std::move(storage);
+    }
+  }
   else if constexpr (detail::IsFloat<value_type>)
     obj = static_cast<value_type>(jv::as_float(value));
   else if constexpr (detail::IsSigned<value_type>)

@@ -130,39 +130,6 @@ concept IsBasicString =
     std::is_same_v<std::string, T> || std::is_same_v<char*, T> ||
     std::is_same_v<char const*, T>;
 
-template <typename Class>
-concept IsSmartPointer = requires(Class o)
-{
-  typename Class::element_type;
-  (bool)o;
-  {
-    (*o)
-  }
-  ->std::same_as<std::add_lvalue_reference_t<typename Class::element_type>>;
-  {
-    o.operator->()
-  }
-  ->std::same_as<typename Class::element_type*>;
-};
-
-template <typename Class>
-concept IsBasicPointer = std::is_pointer_v<Class> && !IsBasicString<Class>;
-
-template <typename Class>
-concept IsPointer = IsBasicPointer<Class> || IsSmartPointer<Class>;
-
-template <typename T>
-constexpr auto pointer_class_type()
-{
-  if constexpr (IsBasicPointer<T>)
-    return std::decay_t<std::remove_pointer_t<std::remove_cv_t<T>>>();
-  else if constexpr (IsSmartPointer<T>)
-    return std::decay_t<std::remove_cv_t<typename T::element_type>>();
-}
-
-template <typename T>
-using pointer_class_t = decltype(pointer_class_type<T>());
-
 template <typename T>
 concept CastableToStringView = requires(T t)
 {
@@ -323,5 +290,65 @@ requires(NamePairList<Class>) using nvvalue_t =
 
 template <typename Class>
 concept IsMap = NamePairList<Class> || BoundClass<Class>;
+
+// Pointers
+template <typename Class>
+concept IsSmartPointer = requires(Class o)
+{
+  typename Class::element_type;
+  (bool)o;
+  {
+    (*o)
+  }
+  ->std::same_as<std::add_lvalue_reference_t<typename Class::element_type>>;
+  {
+    o.operator->()
+  }
+  ->std::same_as<typename Class::element_type*>;
+};
+
+template <typename Class>
+concept IsBasicPointer = std::is_pointer_v<Class> && !IsBasicString<Class>;
+
+template <typename Class>
+concept IsPointer = IsBasicPointer<Class> || IsSmartPointer<Class>;
+
+template <typename T>
+constexpr auto pointer_class_type()
+{
+  if constexpr (IsBasicPointer<T>)
+    return std::decay_t<std::remove_pointer_t<std::remove_cv_t<T>>>();
+  else if constexpr (IsSmartPointer<T>)
+    return std::decay_t<std::remove_cv_t<typename T::element_type>>();
+}
+
+template <typename T>
+using pointer_class_t = decltype(pointer_class_type<T>());
+
+// Optional
+template <typename Class>
+concept IsOptional = requires(Class o)
+{
+  typename Class::value_type;
+  o.has_value();
+  (bool)o;
+  {
+    o.has_value()
+  }
+  ->std::same_as<bool>;
+  o.reset();
+  {
+    (*o)
+  }
+  ->std::same_as<std::add_lvalue_reference_t<typename Class::value_type>>;
+  {
+    o.operator->()
+  }
+  ->std::same_as<typename Class::value_type*>;
+};
+
+template <typename T>
+using optional_t = typename T::value_type;
+
 } // namespace detail
 } // namespace jsb

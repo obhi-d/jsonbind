@@ -153,7 +153,8 @@ void json_ostream::stream(const Value& obj)
     json_ostream::object(ostr).stream(obj);
   else if constexpr (detail::IsArray<value_type>)
     json_ostream::array(ostr).stream(obj);
-  else if constexpr (detail::IsPointer<value_type>)
+  else if constexpr (detail::IsPointer<value_type> ||
+                     detail::IsOptional<value_type>)
   {
     if (!obj)
       ostr << "null";
