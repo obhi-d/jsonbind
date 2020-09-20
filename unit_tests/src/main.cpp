@@ -7,10 +7,11 @@
 #include <json_bind.hpp>
 #include <json_ostream.hpp>
 #include <json_vstream.hpp>
+#include <list>
 #include <map>
+#include <memory>
 #include <sstream>
 #include <vector>
-#include <list>
 #define CATCH_CONFIG_MAIN // This tells Catch to provide a main() - only do this
                           // in one cpp file
 #include <catch2/catch.hpp>
@@ -119,4 +120,47 @@ TEST_CASE("Nested type test", "[validity]")
   auto jv = nlohmann::json::parse(ss);
   jsb::stream_in(jv, read);
   REQUIRE(write == read);
+}
+
+struct pointer_test
+{
+  test*                 basic = nullptr;
+  std::unique_ptr<test> unique;
+  std::shared_ptr<test> shared;
+
+  ~pointer_test()
+  {
+    if (basic)
+      delete basic;
+  }
+};
+
+namespace jsb
+{
+template <>
+auto decl<pointer_test>()
+{
+  return jsb::json_bind(jsb::bind<&pointer_test::basic>("basic"),
+                        jsb::bind<&pointer_test::unique>("unique"),
+                        jsb::bind<&pointer_test::shared>("shared"));
+}
+} // namespace jsb
+
+TEST_CASE("Pointer test", "[validity]")
+{
+  pointer_test write, read;
+  write.basic  = new test;
+  write.unique = std::make_unique<test>();
+  write.shared = std::make_shared<test>();
+
+  std::stringstream ss;
+  jsb::stream_out(ss, write);
+  auto jv = nlohmann::json::parse(ss);
+  jsb::stream_in(jv, read);
+  REQUIRE(read.basic != nullptr);
+  REQUIRE(read.unique.get() != nullptr);
+  REQUIRE(read.shared.get() != nullptr);
+  REQUIRE(*read.basic == *write.basic);
+  REQUIRE(*read.unique == *write.unique);
+  REQUIRE(*read.shared == *write.shared);
 }
