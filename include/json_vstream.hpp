@@ -7,7 +7,8 @@
 
 namespace jsb
 {
-template <typename> struct json_value_wrapper;
+template <typename>
+struct json_value_wrapper;
 
 // returns an object if this value represents an object, or a null json_value
 // template <typename V, typename R> R const& object(V const&);
@@ -31,7 +32,8 @@ template <typename> struct json_value_wrapper;
 // String
 // template <typename V> std::string_view as_string(V const&);
 // Key, return a JsonValue const& object given a key and a map
-// template <typename V, typename R> R const& key(std::string_view key, V const& map);
+// template <typename V, typename R> R const& key(std::string_view key, V const&
+// map);
 
 // json_value from a given API is transformed into
 // a bound class using this interface
@@ -40,7 +42,7 @@ class json_vstream
 {
 public:
   using json_value = JsonValue;
-  using jv = json_value_wrapper<json_value>;
+  using jv         = json_value_wrapper<json_value>;
   class array;
   class object;
 
@@ -168,6 +170,19 @@ void json_vstream<JsonValue>::stream(Value& obj)
     json_vstream<JsonValue>::object(value).stream(obj);
   else if constexpr (detail::IsArray<value_type>)
     json_vstream<JsonValue>::array(value).stream(obj);
+  else if constexpr (detail::IsPointer<value_type>)
+  {
+    if (!jv::valid(value))
+      obj = nullptr;
+    else
+    {
+      if constexpr (detail::IsBasicPointer<value_type>)
+        obj = new detail::pointer_class_t<value_type>();
+      else
+        obj = std::move(value_type(new detail::pointer_class_t<value_type>));
+      stream(*obj);
+    }
+  }
   else if constexpr (detail::IsFloat<value_type>)
     obj = static_cast<value_type>(jv::as_float(value));
   else if constexpr (detail::IsSigned<value_type>)
