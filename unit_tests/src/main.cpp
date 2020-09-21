@@ -246,20 +246,17 @@ auto decl<variant_test>()
 }
 } // namespace jsb
 
-
 TEST_CASE("Variant test", "[validity]")
 {
   variant_test write, read;
 
-  write.one = "string";
-  write.two = std::rand();
+  write.one   = "string";
+  write.two   = std::rand();
   write.three = (double)(int)((float)std::rand() * 10000.0f / (float)RAND_MAX);
-  write.four = test();
+  write.four  = test();
 
   std::stringstream ss;
   jsb::stream_out(ss, write);
-  jsb::stream_out(std::cout, write);
-  std::cout << std::endl;
 
   auto jv = nlohmann::json::parse(ss);
   jsb::stream_in(jv, read);

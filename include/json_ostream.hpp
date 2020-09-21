@@ -135,15 +135,12 @@ private:
   bool moved = false;
 };
 
-
 class json_ostream::variant : public json_ostream::object
 {
 public:
   using base_t = json_ostream::object;
 
-  variant(variant&& i_other) noexcept : base_t(std::move(i_other))
-  {
-  }
+  variant(variant&& i_other) noexcept : base_t(std::move(i_other)) {}
 
   variant(variant const& ostr) noexcept = delete;
   explicit variant(std::ostream& ostr) : base_t(ostr) {}
@@ -153,14 +150,15 @@ public:
   {
     ostr << "\"index\": " << obj.index() << ", ";
     ostr << "\"value\": ";
-    std::visit([this](auto&& arg){
-      json_ostream(ostr).stream(arg);
-    }, obj);
+    std::visit(
+        [this](auto&& arg) {
+          json_ostream(ostr).stream(arg);
+        },
+        obj);
   }
 
 private:
 };
-
 
 json_ostream::array json_ostream::as_array()
 {
@@ -191,14 +189,14 @@ void json_ostream::stream(const Value& obj)
   }
   else if constexpr (detail::IsVariant<value_type>)
     json_ostream::variant(ostr).stream(obj);
+  else if constexpr (detail::IsBool<value_type>)
+    ostr << std::boolalpha << static_cast<bool>(obj);
   else if constexpr (detail::IsFloat<value_type>)
     ostr << static_cast<double>(obj);
   else if constexpr (detail::IsSigned<value_type>)
     ostr << static_cast<std::int64_t>(obj);
   else if constexpr (detail::IsUnsigned<value_type>)
     ostr << static_cast<std::uint64_t>(obj);
-  else if constexpr (detail::IsBool<value_type>)
-    ostr << std::boolalpha << static_cast<bool>(obj);
   else if constexpr (detail::IsString<value_type>)
     ostr << "\"" << detail::as_string(obj) << "\"";
 }

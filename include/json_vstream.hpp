@@ -3,8 +3,8 @@
 //
 #pragma once
 
-#include <json_bind.hpp>
 #include <boost/mp11.hpp>
+#include <json_bind.hpp>
 
 namespace jsb
 {
@@ -48,8 +48,8 @@ public:
   class object;
   class variant;
 
-  array  as_array();
-  object as_object();
+  array   as_array();
+  object  as_object();
   variant as_variant();
 
   template <typename Value>
@@ -175,20 +175,19 @@ public:
       return;
     }
     auto const& index = jv::key("index", jv);
-    if (!index)
+    if (!jv::valid(index))
       return;
     auto const& var = jv::key("value", jv);
-    if (!var)
+    if (!jv::valid(var))
       return;
 
-    obj = std::move(
-        boost::mp11::mp_with_index<boost::mp11::mp_size<Class>>(
-            jv::as_unsigned(index), [&var](auto I) {
-              using type = std::variant_alternative_t<I, Class>;
-              type load;
-              json_vstream<JsonValue>(var).stream(load);
-              return Class(load);
-            }));
+    obj = std::move(boost::mp11::mp_with_index<boost::mp11::mp_size<Class>>(
+        jv::as_unsigned(index), [&var](auto I) {
+          using type = std::variant_alternative_t<I, Class>;
+          type load;
+          json_vstream<JsonValue>(var).stream(load);
+          return Class(load);
+        }));
   }
 
 private:
@@ -242,14 +241,14 @@ void json_vstream<JsonValue>::stream(Value& obj)
   }
   else if constexpr (detail::IsVariant<value_type>)
     json_vstream<JsonValue>::variant(value).stream(obj);
+  else if constexpr (detail::IsBool<value_type>)
+    obj = static_cast<value_type>(jv::as_bool(value));
   else if constexpr (detail::IsFloat<value_type>)
     obj = static_cast<value_type>(jv::as_float(value));
   else if constexpr (detail::IsSigned<value_type>)
     obj = static_cast<value_type>(jv::as_signed(value));
   else if constexpr (detail::IsUnsigned<value_type>)
     obj = static_cast<value_type>(jv::as_unsigned(value));
-  else if constexpr (detail::IsBool<value_type>)
-    obj = static_cast<value_type>(jv::as_bool(value));
   else if constexpr (detail::IsString<value_type>)
     obj = value_type(jv::as_string(value));
 }
