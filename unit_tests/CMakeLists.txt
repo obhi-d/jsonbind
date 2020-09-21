@@ -25,6 +25,7 @@ ExternalProject_Add(Catch2
         -DCATCH_BUILD_TESTING=OFF
         )
 
+
 ## Basic tests
 add_executable(jsbind-validity
         src/main.cpp)

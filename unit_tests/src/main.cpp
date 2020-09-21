@@ -223,3 +223,46 @@ TEST_CASE("Optional test", "[validity]")
 
   REQUIRE(read == write);
 }
+
+struct variant_test
+{
+  std::variant<std::string, int, double, test> one;
+  std::variant<std::string, int, double, test> two;
+  std::variant<std::string, int, double, test> three;
+  std::variant<std::string, int, double, test> four;
+
+  auto operator<=>(variant_test const& other) const = default;
+};
+
+namespace jsb
+{
+template <>
+auto decl<variant_test>()
+{
+  return jsb::json_bind(jsb::bind<&variant_test::one>("one"),
+                        jsb::bind<&variant_test::two>("two"),
+                        jsb::bind<&variant_test::three>("three"),
+                        jsb::bind<&variant_test::four>("four"));
+}
+} // namespace jsb
+
+
+TEST_CASE("Variant test", "[validity]")
+{
+  variant_test write, read;
+
+  write.one = "string";
+  write.two = std::rand();
+  write.three = (double)(int)((float)std::rand() * 10000.0f / (float)RAND_MAX);
+  write.four = test();
+
+  std::stringstream ss;
+  jsb::stream_out(ss, write);
+  jsb::stream_out(std::cout, write);
+  std::cout << std::endl;
+
+  auto jv = nlohmann::json::parse(ss);
+  jsb::stream_in(jv, read);
+
+  REQUIRE(read == write);
+}

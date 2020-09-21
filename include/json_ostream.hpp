@@ -18,6 +18,7 @@ public:
 
   class array;
   class object;
+  class variant;
 
   array  as_array();
   object as_object();
@@ -134,6 +135,33 @@ private:
   bool moved = false;
 };
 
+
+class json_ostream::variant : public json_ostream::object
+{
+public:
+  using base_t = json_ostream::object;
+
+  variant(variant&& i_other) noexcept : base_t(std::move(i_other))
+  {
+  }
+
+  variant(variant const& ostr) noexcept = delete;
+  explicit variant(std::ostream& ostr) : base_t(ostr) {}
+
+  template <typename Class>
+  void stream(Class& obj)
+  {
+    ostr << "\"index\": " << obj.index() << ", ";
+    ostr << "\"value\": ";
+    std::visit([this](auto&& arg){
+      json_ostream(ostr).stream(arg);
+    }, obj);
+  }
+
+private:
+};
+
+
 json_ostream::array json_ostream::as_array()
 {
   return json_ostream::array(ostr);
@@ -161,6 +189,8 @@ void json_ostream::stream(const Value& obj)
     else
       stream(*obj);
   }
+  else if constexpr (detail::IsVariant<value_type>)
+    json_ostream::variant(ostr).stream(obj);
   else if constexpr (detail::IsFloat<value_type>)
     ostr << static_cast<double>(obj);
   else if constexpr (detail::IsSigned<value_type>)

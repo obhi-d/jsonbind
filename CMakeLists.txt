@@ -4,12 +4,13 @@ project(jsonbind VERSION 0.0.1 LANGUAGES CXX)
 
 
 option(JSONBIND_BUILD_TESTS "Build the unit tests when BUILD_TESTING is enabled." ON)
-
+option(JSONBIND_BOOST_ALREADY_INCLUDED "Indicate if boost is already included."  OFF)
 ##
 ## CONFIGURATION
 ##
 set(JSONBIND_TARGET_NAME         ${PROJECT_NAME})
 set(JSONBIND_INCLUDE_BUILD_DIR   "${PROJECT_SOURCE_DIR}/include")
+
 
 ##
 ## TARGET
@@ -31,6 +32,23 @@ target_include_directories(
     INTERFACE $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/external>
 )
 
+if(NOT JSONBIND_BOOST_ALREADY_INCLUDED)
+
+    include(ExternalProject)
+    ExternalProject_Add(mp11
+            GIT_REPOSITORY https://github.com/boostorg/mp11.git
+            PREFIX ${CMAKE_CURRENT_BINARY_DIR}/mp11
+            STEP_TARGETS install
+            CMAKE_ARGS
+            -DCMAKE_INSTALL_PREFIX=${CMAKE_SOURCE_DIR}/out/external/install
+            -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+            -DCMAKE_CONFIGURATION_TYPES=${CMAKE_CONFIGURATION_TYPES}
+            )
+
+    target_include_directories(jsonbind INTERFACE "${CMAKE_SOURCE_DIR}/out/external/install/include")
+    add_dependencies(jsonbind mp11)
+
+endif()
 ##
 ## TESTS
 ##

@@ -78,6 +78,10 @@ template <> struct json_value_wrapper<nlohmann::json>
   // Signed
   inline static std::int64_t as_signed(nlohmann::json const& val)
   {
+    if (val.is_boolean())
+    {
+      return static_cast<std::int64_t>(val.get<bool>());
+    }
     if (val.is_number())
     {
       return val.get<std::int64_t>();
@@ -91,6 +95,10 @@ template <> struct json_value_wrapper<nlohmann::json>
   // Unsigned
   inline static std::uint64_t as_unsigned(nlohmann::json const& val)
   {
+    if (val.is_boolean())
+    {
+      return static_cast<std::uint64_t>(val.get<bool>());
+    }
     if (val.is_number_unsigned())
     {
       return val.get<std::uint64_t>();

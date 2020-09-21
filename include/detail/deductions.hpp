@@ -9,6 +9,7 @@
 #include <string_view>
 #include <tuple>
 #include <type_traits>
+#include <variant>
 
 namespace jsb
 {
@@ -349,6 +350,17 @@ concept IsOptional = requires(Class o)
 
 template <typename T>
 using optional_t = typename T::value_type;
+
+// Variant
+template <typename Class>
+concept IsVariant = requires(Class o)
+{
+  {
+    o.index()
+  }
+  ->std::same_as<std::size_t>;
+}
+&&std::variant_size_v<Class> > 0;
 
 } // namespace detail
 } // namespace jsb

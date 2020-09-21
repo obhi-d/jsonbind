@@ -4,6 +4,7 @@
 #pragma once
 
 #include <json_bind.hpp>
+#include <boost/mp11.hpp>
 
 namespace jsb
 {
@@ -45,9 +46,11 @@ public:
   using jv         = json_value_wrapper<json_value>;
   class array;
   class object;
+  class variant;
 
   array  as_array();
   object as_object();
+  variant as_variant();
 
   template <typename Value>
   inline void stream(Value& obj);
@@ -149,6 +152,49 @@ private:
 };
 
 template <typename JsonValue>
+class json_vstream<JsonValue>::variant : public json_vstream<JsonValue>::object
+{
+public:
+  using base_t = json_vstream<JsonValue>::object;
+  using json_vstream<JsonValue>::json_value;
+
+  variant(variant&& i_other) noexcept : base_t(std::move(i_other))
+  {
+    i_other.moved = true;
+  }
+  variant(variant const& ostr) noexcept = delete;
+  explicit variant(JsonValue const& value) : base_t(value) {}
+  ~variant() {}
+
+  template <typename Class>
+  void stream(Class& obj)
+  {
+    auto const& jv = jv::object(this->json_vstream<JsonValue>::object::value);
+    if (!jv::valid(jv))
+    {
+      return;
+    }
+    auto const& index = jv::key("index", jv);
+    if (!index)
+      return;
+    auto const& var = jv::key("value", jv);
+    if (!var)
+      return;
+
+    obj = std::move(
+        boost::mp11::mp_with_index<boost::mp11::mp_size<Class>>(
+            jv::as_unsigned(index), [&var](auto I) {
+              using type = std::variant_alternative_t<I, Class>;
+              type load;
+              json_vstream<JsonValue>(var).stream(load);
+              return Class(load);
+            }));
+  }
+
+private:
+};
+
+template <typename JsonValue>
 typename json_vstream<JsonValue>::array json_vstream<JsonValue>::as_array()
 {
   return json_vstream<JsonValue>::array(value);
@@ -194,6 +240,8 @@ void json_vstream<JsonValue>::stream(Value& obj)
       obj = std::move(storage);
     }
   }
+  else if constexpr (detail::IsVariant<value_type>)
+    json_vstream<JsonValue>::variant(value).stream(obj);
   else if constexpr (detail::IsFloat<value_type>)
     obj = static_cast<value_type>(jv::as_float(value));
   else if constexpr (detail::IsSigned<value_type>)
