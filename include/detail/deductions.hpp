@@ -180,17 +180,39 @@ template <typename T>
 concept IsString = IsBasicString<T> || CastableToStringView<T> ||
                    ConvertibleToString<T> || TransformToString<T>;
 
+template <typename T>
+concept CastableToSigned = requires(T t)
+{
+  {
+    static_cast<std::int32_t>(t)
+  }
+  ->std::same_as<std::int32_t>;
+  t = std::int32_t();
+};
+
 // Signed
 template <typename T>
 concept IsSigned = (std::is_signed_v<T> && std::is_integral_v<T>) ||
                    (std::is_enum_v<T> &&
-                    std::is_signed_v<std::underlying_type_t<T>>);
+                    std::is_signed_v<std::underlying_type_t<T>>) ||
+                   CastableToSigned<T>;
+
+template <typename T>
+concept CastableToUnsigned = requires(T t)
+{
+  {
+    static_cast<std::uint32_t>(t)
+  }
+  ->std::same_as<std::uint32_t>;
+  t = std::uint32_t();
+};
 
 // Unsigned
 template <typename T>
 concept IsUnsigned = (std::is_unsigned_v<T> && std::is_integral_v<T>) ||
                      (std::is_enum_v<T> &&
-                      std::is_unsigned_v<std::underlying_type_t<T>>);
+                      std::is_unsigned_v<std::underlying_type_t<T>>) ||
+                     CastableToUnsigned<T>;
 
 // Float
 template <typename T>

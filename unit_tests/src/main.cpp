@@ -263,3 +263,8 @@ TEST_CASE("Variant test", "[validity]")
 
   REQUIRE(read == write);
 }
+
+struct int_cast
+{
+  int value;
+};
