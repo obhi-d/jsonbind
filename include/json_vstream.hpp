@@ -247,8 +247,12 @@ void json_vstream<JsonValue>::stream(Value& obj)
     obj = static_cast<value_type>(jv::as_float(value));
   else if constexpr (detail::IsSigned<value_type>)
     obj = static_cast<value_type>(jv::as_signed(value));
+  else if constexpr (detail::IsSignedCastable<value_type>)
+    obj = jv::as_signed(value);
   else if constexpr (detail::IsUnsigned<value_type>)
     obj = static_cast<value_type>(jv::as_unsigned(value));
+  else if constexpr (detail::IsUnsignedCastable<value_type>)
+    obj = jv::as_unsigned(value);
   else if constexpr (detail::IsString<value_type>)
     obj = value_type(jv::as_string(value));
 }

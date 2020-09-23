@@ -266,5 +266,32 @@ TEST_CASE("Variant test", "[validity]")
 
 struct int_cast
 {
-  int value;
+  std::int64_t value;
+
+  operator std::int64_t() const
+  {
+    return value;
+  }
+
+  int_cast& operator=(std::int64_t val)
+  {
+    value = val;
+    return *this;
+  }
+
+  auto operator<=>(int_cast const& other) const = default;
 };
+
+TEST_CASE("Int cast", "[validity]")
+{
+  int_cast write, read;
+
+  write = 100;
+  std::stringstream ss;
+  jsb::stream_out(ss, write);
+
+  auto jv = nlohmann::json::parse(ss);
+  jsb::stream_in(jv, read);
+
+  REQUIRE(read == write);
+}
