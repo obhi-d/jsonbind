@@ -295,3 +295,59 @@ TEST_CASE("Int cast", "[validity]")
 
   REQUIRE(read == write);
 }
+
+struct free_fn
+{
+  std::int64_t value[2];
+  auto         operator<=>(free_fn const& other) const = default;
+
+  static std::int64_t x(free_fn v)
+  {
+    return v.value[0];
+  }
+
+  static std::int64_t y(free_fn v)
+  {
+    return v.value[1];
+  }
+
+  static void x(free_fn& v, std::int64_t val)
+  {
+    v.value[0] = val;
+  }
+
+  static void y(free_fn& v, std::int64_t val)
+  {
+    v.value[1] = val;
+  }
+};
+
+namespace jsb
+{
+template <>
+auto decl<free_fn>()
+{
+  return jsb::json_bind(
+      jsb::bind<static_cast<std::int64_t (*)(free_fn)>(&free_fn::x),
+                static_cast<void (*)(free_fn&, std::int64_t)>(&free_fn::x)>(
+          "x"),
+      jsb::bind<static_cast<std::int64_t (*)(free_fn)>(&free_fn::y),
+                static_cast<void (*)(free_fn&, std::int64_t)>(&free_fn::y)>(
+          "y"));
+}
+} // namespace jsb
+
+TEST_CASE("Free function test", "[validity]")
+{
+  free_fn write, read;
+
+  free_fn::x(write, 100);
+  free_fn::y(write, 200);
+  std::stringstream ss;
+  jsb::stream_out(ss, write);
+
+  auto jv = nlohmann::json::parse(ss);
+  jsb::stream_in(jv, read);
+
+  REQUIRE(read == write);
+}

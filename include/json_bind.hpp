@@ -34,14 +34,12 @@ private:
   std::string_view name = nullptr;
 };
 
-template <typename Class, auto MPtr>
-class decl_member_ptr
-    : public decl_base<Class, typename detail::member_ptr_t<MPtr>::member_t>
+template <typename Class, typename MPtr, auto Ptr>
+class decl_member_ptr : public decl_base<Class, MPtr>
 {
 public:
-  using base_t =
-      decl_base<Class, typename detail::member_ptr_t<MPtr>::member_t>;
-  using M = typename base_t::MemTy;
+  using base_t = decl_base<Class, MPtr>;
+  using M      = typename base_t::MemTy;
 
   constexpr decl_member_ptr(std::string_view iName) : decl_base<Class, M>(iName)
   {
@@ -49,29 +47,26 @@ public:
 
   inline void value(Class& obj, M const& value) const
   {
-    obj.*MPtr = value;
+    obj.*Ptr = value;
   }
 
   inline void value(Class& obj, M&& value) const
   {
-    obj.*MPtr = std::move(value);
+    obj.*Ptr = std::move(value);
   }
 
   M const& value(Class const& obj) const
   {
-    return (obj.*MPtr);
+    return (obj.*Ptr);
   }
 };
 
-template <typename Class, auto Getter, auto Setter>
-class decl_get_set
-    : public decl_base<Class,
-                       typename detail::member_getter_t<Getter>::return_t>
+template <typename Class, typename RetTy, auto Getter, auto Setter>
+class decl_get_set : public decl_base<Class, RetTy>
 {
 public:
-  using base_t =
-      decl_base<Class, typename detail::member_getter_t<Getter>::return_t>;
-  using M = typename base_t::MemTy;
+  using base_t = decl_base<Class, RetTy>;
+  using M      = typename base_t::MemTy;
 
   constexpr decl_get_set(std::string_view iName) : base_t(iName) {}
 
@@ -86,14 +81,12 @@ public:
   }
 };
 
-template <typename Class, auto Getter, auto Setter>
-class decl_free_get_set
-    : public decl_base<Class, typename detail::free_getter_t<Getter>::return_t>
+template <typename Class, typename RetTy, auto Getter, auto Setter>
+class decl_free_get_set : public decl_base<Class, RetTy>
 {
 public:
-  using base_t =
-      decl_base<Class, typename detail::free_getter_t<Getter>::return_t>;
-  using M = typename base_t::MemTy;
+  using base_t = decl_base<Class, RetTy>;
+  using M      = typename base_t::MemTy;
 
   constexpr decl_free_get_set(std::string_view iName) : base_t(iName) {}
 
@@ -148,6 +141,7 @@ template <auto MPtr>
 requires(detail::IsMemberPtr<MPtr>) constexpr auto bind(std::string_view iName)
 {
   return detail::decl_member_ptr<typename detail::member_ptr_t<MPtr>::class_t,
+                                 typename detail::member_ptr_t<MPtr>::member_t,
                                  MPtr>(iName);
 }
 
@@ -155,8 +149,10 @@ template <auto Getter, auto Setter>
 requires(detail::IsMemberGetterSetter<Getter, Setter>) constexpr auto bind(
     std::string_view iName)
 {
-  return detail::decl_get_set<typename detail::member_getter_t<Getter>::class_t,
-                              Getter, Setter>(iName);
+  return detail::decl_get_set<
+      typename detail::member_getter_t<Getter>::class_t,
+      typename detail::member_getter_t<Getter>::return_t, Getter, Setter>(
+      iName);
 }
 
 template <auto Getter, auto Setter>
@@ -164,7 +160,18 @@ requires(detail::IsFreeGetterSetter<Getter, Setter>) constexpr auto bind(
     std::string_view iName)
 {
   return detail::decl_free_get_set<
-      typename detail::free_getter_t<Getter>::class_t, Getter, Setter>(iName);
+      typename detail::free_getter_t<Getter>::class_t,
+      typename detail::free_getter_t<Getter>::return_t, Getter, Setter>(iName);
+}
+
+template <auto Getter, auto Setter>
+requires(detail::IsFreeGetterByValSetter<Getter, Setter>) constexpr auto bind(
+    std::string_view iName)
+{
+  return detail::decl_free_get_set<
+      typename detail::free_getter_by_val_t<Getter>::class_t,
+      typename detail::free_getter_by_val_t<Getter>::return_t, Getter, Setter>(
+      iName);
 }
 
 template <typename... Args>

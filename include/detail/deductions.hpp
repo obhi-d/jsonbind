@@ -66,9 +66,19 @@ struct member_setter_t<MF>
 
 template <auto>
 struct free_getter_t;
+template <auto>
+struct free_getter_by_val_t;
 
 template <typename T, typename R, R (*F)(T const&)>
 struct free_getter_t<F>
+{
+  using class_t  = std::decay_t<T>;
+  using return_t = R;
+  using value_t  = std::decay_t<R>;
+};
+
+template <typename T, typename R, R (*F)(T)>
+struct free_getter_by_val_t<F>
 {
   using class_t  = std::decay_t<T>;
   using return_t = R;
@@ -120,6 +130,15 @@ concept IsFreeGetterSetter = requires
 {
   typename free_getter_t<Getter>::return_t;
   typename free_getter_t<Getter>::class_t;
+  typename free_setter_t<Setter>::return_t;
+  typename free_setter_t<Setter>::class_t;
+};
+
+template <auto Getter, auto Setter>
+concept IsFreeGetterByValSetter = requires
+{
+  typename free_getter_by_val_t<Getter>::return_t;
+  typename free_getter_by_val_t<Getter>::class_t;
   typename free_setter_t<Setter>::return_t;
   typename free_setter_t<Setter>::class_t;
 };
