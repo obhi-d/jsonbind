@@ -108,8 +108,11 @@ public:
       else if constexpr (detail::CastableFromString<nvname_t>)
         detail::emplace(obj, std::string(key), std::move(stream_val));
       else if constexpr (detail::TransformFromString<nvname_t>)
-        detail::emplace(obj, jsb::from_string<nvname_t>(key),
-                        std::move(stream_val));
+      {
+        nvname_t name;
+        jsb::from_string(name, key);
+        detail::emplace(obj, std::move(name), std::move(stream_val));
+      }
     });
   }
 
@@ -253,8 +256,16 @@ void json_vstream<JsonValue>::stream(Value& obj)
     obj = jv::as_signed(value);
   else if constexpr (detail::IsUnsignedCastable<value_type>)
     obj = jv::as_unsigned(value);
+  else if constexpr (std::is_same_v<std::remove_cv_t<value_type>,
+                                    std::remove_cv_t<JsonValue>>)
+    obj = value;
   else if constexpr (detail::IsString<value_type>)
-    obj = value_type(jv::as_string(value));
+  {
+    if constexpr (detail::TransformFromString<value_type>)
+      jsb::from_string(obj, jv::as_string(value));
+    else
+      obj = value_type(jv::as_string(value));
+  }
 }
 
 template <typename JsonValue, typename Class>

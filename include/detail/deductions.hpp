@@ -13,15 +13,6 @@
 
 namespace jsb
 {
-template <typename T>
-auto to_string(T const&)
-{
-}
-
-template <typename T>
-auto from_string(std::string_view t)
-{
-}
 
 template <typename Class = void>
 auto decl()
@@ -169,12 +160,9 @@ concept CastableFromString = requires
 };
 
 template <typename T>
-concept TransformFromString = requires
+concept TransformFromString = requires(std::remove_cv_t<T>& ref)
 {
-  {
-    jsb::from_string<T>(std::string_view())
-  }
-  ->std::same_as<T>;
+  jsb::from_string(ref, std::string_view());
 };
 
 template <typename T>
@@ -196,8 +184,18 @@ concept TransformToString = requires(T t)
 };
 
 template <typename T>
-concept IsString = IsBasicString<T> || CastableToStringView<T> ||
-                   ConvertibleToString<T> || TransformToString<T>;
+concept TransformToStringView = requires(T t)
+{
+  {
+    jsb::to_string(t)
+  }
+  ->std::same_as<std::string_view>;
+};
+
+template <typename T>
+concept IsString =
+    IsBasicString<T> || CastableToStringView<T> || ConvertibleToString<T> ||
+    TransformToString<T> || TransformToStringView<T>;
 
 template <typename T>
 concept IsSignedCastable = requires(T t)

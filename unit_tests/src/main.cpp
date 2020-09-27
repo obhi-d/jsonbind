@@ -351,3 +351,49 @@ TEST_CASE("Free function test", "[validity]")
 
   REQUIRE(read == write);
 }
+
+struct string_tf
+{
+  std::string value;
+  auto        operator<=>(string_tf const& other) const = default;
+};
+
+struct str_obj
+{
+  string_tf m;
+  auto      operator<=>(str_obj const& other) const = default;
+};
+
+namespace jsb
+{
+std::string_view to_string(string_tf const& i)
+{
+  return i.value;
+}
+
+void from_string(string_tf& i, std::string_view v)
+{
+  i.value = v;
+}
+
+template <>
+auto decl<str_obj>()
+{
+  return jsb::json_bind(jsb::bind<&str_obj::m>("m"));
+}
+
+} // namespace jsb
+
+TEST_CASE("String transform test", "[validity]")
+{
+  str_obj write, read;
+  write.m.value = "String transform test";
+
+  std::stringstream ss;
+  jsb::stream_out(ss, write);
+
+  auto jv = nlohmann::json::parse(ss);
+  jsb::stream_in(jv, read);
+
+  REQUIRE(read == write);
+}

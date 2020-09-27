@@ -26,8 +26,8 @@ requires(!detail::IsBasicString<T> && !detail::CastableToStringView<T> &&
 
 template <typename T>
 requires(!detail::IsBasicString<T> && !detail::CastableToStringView<T> &&
-         detail::TransformToString<T>) static std::string
-    as_string(T const& val)
+         (detail::TransformToString<T> ||
+          detail::TransformToStringView<T>)) static auto as_string(T const& val)
 {
   return jsb::to_string(val);
 }
