@@ -53,7 +53,7 @@ public:
   variant as_variant();
 
   template <typename Value>
-  inline void stream(Value& obj);
+  inline bool stream(Value& obj);
 
   json_vstream(json_vstream const&) noexcept = delete;
   explicit json_vstream(json_value const& i_val) noexcept : value(i_val) {}
@@ -80,18 +80,19 @@ public:
   ~object()                           = default;
 
   template <typename Class>
-  requires(detail::BoundClass<Class>) void stream(Class& obj)
+  requires(detail::BoundClass<Class>) bool stream(Class& obj)
   {
     detail::set_all<Class>(*this, obj);
+    return !err_flag;
   }
 
   template <typename Class>
-  requires(detail::NamePairList<Class>) void stream(Class& obj)
+  requires(detail::NamePairList<Class>) bool stream(Class& obj)
   {
     auto const& jv = jv::object(value);
     if (!jv::valid(jv))
     {
-      return;
+      return false;
     }
 
     using nvname_t  = detail::nvname_t<Class>;
@@ -99,9 +100,10 @@ public:
 
     detail::reserve(obj, detail::size(jv));
 
-    jv::map_for_each(jv, [&obj](std::string_view key, JsonValue const& value) {
+    jv::map_for_each(jv, [this, &obj](std::string_view key, JsonValue const& value) {
       nvvalue_t stream_val;
-      json_vstream<JsonValue>(value).stream(stream_val);
+      if(err_flag += !json_vstream<JsonValue>(value).stream(stream_val))
+        return;
       if constexpr (detail::IsString<nvname_t> ||
                     detail::CastableFromStringView<nvname_t>)
         detail::emplace(obj, nvname_t(key), std::move(stream_val));
@@ -110,14 +112,18 @@ public:
       else if constexpr (detail::TransformFromString<nvname_t>)
       {
         nvname_t name;
-        jsb::from_string(name, key);
+        jsb::string_transform<nvname_t>::from_string(name, key);
         detail::emplace(obj, std::move(name), std::move(stream_val));
       }
     });
+    return err_flag == 0;
   }
 
   template <typename Class, typename Decl>
   inline void operator()(Class& obj, Decl const& decl);
+
+private:
+  int err_flag = 0;
 };
 
 template <typename JsonValue>
@@ -135,23 +141,26 @@ public:
   ~array() {}
 
   template <typename Class>
-  void stream(Class& obj)
+  bool stream(Class& obj)
   {
     auto const& jv = jv::array(value);
     if (!jv::valid(jv))
     {
-      return;
+      return false;
     }
 
     detail::reserve(obj, detail::size(jv));
-    jv::array_for_each(jv, [&obj](JsonValue const& value) {
+    jv::array_for_each(jv, [this, &obj](JsonValue const& value) {
       detail::array_value_t<Class> stream_val;
-      json_vstream<JsonValue>(value).stream(stream_val);
+      if(err_flag += !json_vstream<JsonValue>(value).stream(stream_val))
+        return;
       detail::emplace(obj, std::move(stream_val));
     });
+    return err_flag == 0;
   }
 
 private:
+  int err_flag = 0;
 };
 
 template <typename JsonValue>
@@ -170,30 +179,33 @@ public:
   ~variant() {}
 
   template <typename Class>
-  void stream(Class& obj)
+  bool stream(Class& obj)
   {
     auto const& jv = jv::object(this->json_vstream<JsonValue>::object::value);
     if (!jv::valid(jv))
     {
-      return;
+      return false;
     }
     auto const& index = jv::key("index", jv);
     if (!jv::valid(index))
-      return;
+      return false;
     auto const& var = jv::key("value", jv);
     if (!jv::valid(var))
-      return;
+      return false;
 
     obj = std::move(boost::mp11::mp_with_index<boost::mp11::mp_size<Class>>(
-        jv::as_unsigned(index), [&var](auto I) {
+        jv::as_unsigned(index), [this, &var](auto I) {
           using type = std::variant_alternative_t<I, Class>;
           type load;
-          json_vstream<JsonValue>(var).stream(load);
+          err_flag += !json_vstream<JsonValue>(var).stream(load);
           return Class(load);
         }));
+
+    return err_flag == 0;
   }
 
 private:
+  int err_flag = 0;
 };
 
 template <typename JsonValue>
@@ -210,14 +222,15 @@ typename json_vstream<JsonValue>::object json_vstream<JsonValue>::as_object()
 
 template <typename JsonValue>
 template <typename Value>
-void json_vstream<JsonValue>::stream(Value& obj)
+bool json_vstream<JsonValue>::stream(Value& obj)
 {
   using value_type = std::decay_t<Value>;
+  int err_flag = 0;
 
   if constexpr (detail::IsMap<value_type>)
-    json_vstream<JsonValue>::object(value).stream(obj);
+    err_flag += !json_vstream<JsonValue>::object(value).stream(obj);
   else if constexpr (detail::IsArray<value_type>)
-    json_vstream<JsonValue>::array(value).stream(obj);
+    err_flag += !json_vstream<JsonValue>::array(value).stream(obj);
   else if constexpr (detail::IsPointer<value_type>)
   {
     if (!jv::valid(value))
@@ -228,7 +241,7 @@ void json_vstream<JsonValue>::stream(Value& obj)
         obj = new detail::pointer_class_t<value_type>();
       else
         obj = std::move(value_type(new detail::pointer_class_t<value_type>));
-      stream(*obj);
+      err_flag += !stream(*obj);
     }
   }
   else if constexpr (detail::IsOptional<value_type>)
@@ -238,12 +251,12 @@ void json_vstream<JsonValue>::stream(Value& obj)
     else
     {
       detail::optional_t<value_type> storage;
-      stream(storage);
+      err_flag += !stream(storage);
       obj = std::move(storage);
     }
   }
   else if constexpr (detail::IsVariant<value_type>)
-    json_vstream<JsonValue>::variant(value).stream(obj);
+    err_flag += !json_vstream<JsonValue>::variant(value).stream(obj);
   else if constexpr (detail::IsBool<value_type>)
     obj = static_cast<value_type>(jv::as_bool(value));
   else if constexpr (detail::IsFloat<value_type>)
@@ -262,16 +275,23 @@ void json_vstream<JsonValue>::stream(Value& obj)
   else if constexpr (detail::IsString<value_type>)
   {
     if constexpr (detail::TransformFromString<value_type>)
-      jsb::from_string(obj, jv::as_string(value));
+      jsb::string_transform<value_type>::from_string(obj, jv::as_string(value));
     else
       obj = value_type(jv::as_string(value));
   }
+  else
+  {
+    err_flag += 1;
+  }
+    
+  
+  return err_flag == 0;
 }
 
 template <typename JsonValue, typename Class>
-void stream_in(JsonValue const& jvalue, Class& obj)
+bool stream_in(JsonValue const& jvalue, Class& obj)
 {
-  json_vstream<JsonValue>(jvalue).template stream<Class>(obj);
+  return json_vstream<JsonValue>(jvalue).template stream<Class>(obj);
 }
 
 template <typename JsonValue>
@@ -283,9 +303,14 @@ void json_vstream<JsonValue>::object::operator()(Class& obj, Decl const& decl)
   {
     using value_t = typename Decl::MemTy;
     value_t load;
-    json_vstream<JsonValue>(key_val).stream(load);
+    err_flag += !json_vstream<JsonValue>(key_val).stream(load);
     decl.value(obj, std::move(load));
   }
+  else
+  {
+    err_flag++;
+  }
+  
 }
 
 } // namespace jsb

@@ -29,7 +29,7 @@ requires(!detail::IsBasicString<T> && !detail::CastableToStringView<T> &&
          (detail::TransformToString<T> ||
           detail::TransformToStringView<T>)) static auto as_string(T const& val)
 {
-  return jsb::to_string(val);
+  return jsb::string_transform<T>::to_string(val);
 }
 
 template <typename C, typename... Args>

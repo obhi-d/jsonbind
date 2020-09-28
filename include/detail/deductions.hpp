@@ -14,6 +14,10 @@
 namespace jsb
 {
 
+// String transforms
+template <typename T>
+struct string_transform;
+
 template <typename Class = void>
 auto decl()
 {
@@ -160,38 +164,30 @@ concept CastableFromString = requires
 };
 
 template <typename T>
-concept TransformFromString = requires(std::remove_cv_t<T>& ref)
-{
-  jsb::from_string(ref, std::string_view());
-};
-
-template <typename T>
 concept ConvertibleToString = requires(T t)
 {
-  {
-    std::to_string(t)
-  }
-  ->std::same_as<std::string>;
+  std::to_string(t);
 };
 
 template <typename T>
-concept TransformToString = requires(T t)
+concept TransformFromString = requires(T ref)
 {
-  {
-    jsb::to_string(t)
-  }
-  ->std::same_as<std::string>;
+  { jsb::string_transform<T>::from_string(ref, std::string_view()) } -> std::same_as<T&>;
 };
 
 template <typename T>
-concept TransformToStringView = requires(T t)
+concept TransformToString = requires(T ref)
 {
-  {
-    jsb::to_string(t)
-  }
-  ->std::same_as<std::string_view>;
+  { jsb::string_transform<T>::to_string(ref) } -> std::same_as<std::string>;
 };
 
+template <typename T>
+concept TransformToStringView = requires(T ref)
+{
+  { jsb::string_transform<T>::to_string(ref) } -> std::same_as<std::string_view>;
+};
+
+// String type check
 template <typename T>
 concept IsString =
     IsBasicString<T> || CastableToStringView<T> || ConvertibleToString<T> ||

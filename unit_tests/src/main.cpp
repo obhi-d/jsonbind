@@ -80,7 +80,7 @@ TEST_CASE("Simple test", "[validity]")
   auto jv = nlohmann::json::parse(ss);
 
   test inp;
-  jsb::stream_in(jv, inp);
+  REQUIRE(jsb::stream_in(jv, inp) == true);
 
   REQUIRE(outp == inp);
 }
@@ -98,7 +98,7 @@ TEST_CASE("Array test", "[validity]")
   auto jv = nlohmann::json::parse(ss);
 
   std::list<test> read;
-  jsb::stream_in(jv, read);
+  REQUIRE(jsb::stream_in(jv, read) == true);
   REQUIRE(write == read);
 }
 
@@ -119,7 +119,7 @@ TEST_CASE("Nested type test", "[validity]")
   std::stringstream ss;
   jsb::stream_out(ss, write);
   auto jv = nlohmann::json::parse(ss);
-  jsb::stream_in(jv, read);
+  REQUIRE(jsb::stream_in(jv, read) == true);
   REQUIRE(write == read);
 }
 
@@ -159,7 +159,7 @@ TEST_CASE("Pointer test", "[validity]")
   std::stringstream ss;
   jsb::stream_out(ss, write);
   auto jv = nlohmann::json::parse(ss);
-  jsb::stream_in(jv, read);
+  REQUIRE(jsb::stream_in(jv, read) == true);
   REQUIRE(read.basic != nullptr);
   REQUIRE(read.unique.get() != nullptr);
   REQUIRE(read.shared.get() != nullptr);
@@ -219,7 +219,7 @@ TEST_CASE("Optional test", "[validity]")
   jsb::stream_out(ss, write);
 
   auto jv = nlohmann::json::parse(ss);
-  jsb::stream_in(jv, read);
+  REQUIRE(jsb::stream_in(jv, read) == true);
 
   REQUIRE(read == write);
 }
@@ -259,7 +259,7 @@ TEST_CASE("Variant test", "[validity]")
   jsb::stream_out(ss, write);
 
   auto jv = nlohmann::json::parse(ss);
-  jsb::stream_in(jv, read);
+  REQUIRE(jsb::stream_in(jv, read) == true);
 
   REQUIRE(read == write);
 }
@@ -291,15 +291,15 @@ TEST_CASE("Int cast", "[validity]")
   jsb::stream_out(ss, write);
 
   auto jv = nlohmann::json::parse(ss);
-  jsb::stream_in(jv, read);
+  REQUIRE(jsb::stream_in(jv, read) == true);
 
   REQUIRE(read == write);
 }
 
 struct free_fn
 {
-  std::int64_t value[2];
-  auto         operator<=>(free_fn const& other) const = default;
+  std::array<std::int64_t, 2> value;
+  auto                        operator<=>(free_fn const& other) const = default;
 
   static std::int64_t x(free_fn v)
   {
@@ -347,7 +347,7 @@ TEST_CASE("Free function test", "[validity]")
   jsb::stream_out(ss, write);
 
   auto jv = nlohmann::json::parse(ss);
-  jsb::stream_in(jv, read);
+  REQUIRE(jsb::stream_in(jv, read) == true);
 
   REQUIRE(read == write);
 }
@@ -366,15 +366,21 @@ struct str_obj
 
 namespace jsb
 {
-std::string_view to_string(string_tf const& i)
-{
-  return i.value;
-}
 
-void from_string(string_tf& i, std::string_view v)
+template<>
+struct string_transform<string_tf>
 {
-  i.value = v;
-}
+  static std::string_view to_string(string_tf const& i)
+  {
+    return i.value;
+  }
+
+  static string_tf& from_string(string_tf& i, std::string_view v)
+  {
+    i.value = v;
+    return i;
+  }
+};
 
 template <>
 auto decl<str_obj>()
@@ -389,11 +395,22 @@ TEST_CASE("String transform test", "[validity]")
   str_obj write, read;
   write.m.value = "String transform test";
 
+  static_assert(jsb::detail::TransformToStringView<string_tf>);
+
   std::stringstream ss;
   jsb::stream_out(ss, write);
+  jsb::stream_out(std::cout, write);
+  std::cout << std::endl;
 
   auto jv = nlohmann::json::parse(ss);
-  jsb::stream_in(jv, read);
+  REQUIRE(jsb::stream_in(jv, read) == true);
 
   REQUIRE(read == write);
+}
+
+TEST_CASE("Test parse failure", "[validity]")
+{
+  str_obj           read;
+  auto jv = nlohmann::json();
+  REQUIRE(jsb::stream_in(jv, read) == false);
 }
