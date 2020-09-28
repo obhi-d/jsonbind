@@ -367,7 +367,7 @@ struct str_obj
 namespace jsb
 {
 
-template<>
+template <>
 struct string_transform<string_tf>
 {
   static std::string_view to_string(string_tf const& i)
@@ -406,11 +406,4 @@ TEST_CASE("String transform test", "[validity]")
   REQUIRE(jsb::stream_in(jv, read) == true);
 
   REQUIRE(read == write);
-}
-
-TEST_CASE("Test parse failure", "[validity]")
-{
-  str_obj           read;
-  auto jv = nlohmann::json();
-  REQUIRE(jsb::stream_in(jv, read) == false);
 }

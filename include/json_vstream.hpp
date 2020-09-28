@@ -100,22 +100,23 @@ public:
 
     detail::reserve(obj, detail::size(jv));
 
-    jv::map_for_each(jv, [this, &obj](std::string_view key, JsonValue const& value) {
-      nvvalue_t stream_val;
-      if(err_flag += !json_vstream<JsonValue>(value).stream(stream_val))
-        return;
-      if constexpr (detail::IsString<nvname_t> ||
-                    detail::CastableFromStringView<nvname_t>)
-        detail::emplace(obj, nvname_t(key), std::move(stream_val));
-      else if constexpr (detail::CastableFromString<nvname_t>)
-        detail::emplace(obj, std::string(key), std::move(stream_val));
-      else if constexpr (detail::TransformFromString<nvname_t>)
-      {
-        nvname_t name;
-        jsb::string_transform<nvname_t>::from_string(name, key);
-        detail::emplace(obj, std::move(name), std::move(stream_val));
-      }
-    });
+    jv::map_for_each(
+        jv, [this, &obj](std::string_view key, JsonValue const& value) {
+          nvvalue_t stream_val;
+          if (err_flag += !json_vstream<JsonValue>(value).stream(stream_val))
+            return;
+          if constexpr (detail::IsString<nvname_t> ||
+                        detail::CastableFromStringView<nvname_t>)
+            detail::emplace(obj, nvname_t(key), std::move(stream_val));
+          else if constexpr (detail::CastableFromString<nvname_t>)
+            detail::emplace(obj, std::string(key), std::move(stream_val));
+          else if constexpr (detail::TransformFromString<nvname_t>)
+          {
+            nvname_t name;
+            jsb::string_transform<nvname_t>::from_string(name, key);
+            detail::emplace(obj, std::move(name), std::move(stream_val));
+          }
+        });
     return err_flag == 0;
   }
 
@@ -152,7 +153,7 @@ public:
     detail::reserve(obj, detail::size(jv));
     jv::array_for_each(jv, [this, &obj](JsonValue const& value) {
       detail::array_value_t<Class> stream_val;
-      if(err_flag += !json_vstream<JsonValue>(value).stream(stream_val))
+      if (err_flag += !json_vstream<JsonValue>(value).stream(stream_val))
         return;
       detail::emplace(obj, std::move(stream_val));
     });
@@ -225,7 +226,7 @@ template <typename Value>
 bool json_vstream<JsonValue>::stream(Value& obj)
 {
   using value_type = std::decay_t<Value>;
-  int err_flag = 0;
+  int err_flag     = 0;
 
   if constexpr (detail::IsMap<value_type>)
     err_flag += !json_vstream<JsonValue>::object(value).stream(obj);
@@ -283,8 +284,7 @@ bool json_vstream<JsonValue>::stream(Value& obj)
   {
     err_flag += 1;
   }
-    
-  
+
   return err_flag == 0;
 }
 
@@ -308,9 +308,8 @@ void json_vstream<JsonValue>::object::operator()(Class& obj, Decl const& decl)
   }
   else
   {
-    err_flag++;
+    // Key not found is not an error
   }
-  
 }
 
 } // namespace jsb
