@@ -47,7 +47,8 @@ struct test
 
 struct complex
 {
-  std::vector<test>          array;
+  std::vector<test>          vec;
+  std::array<int, 2>         arr;
   std::map<std::string, int> map;
   auto                       operator<=>(complex const&) const = default;
 };
@@ -66,7 +67,8 @@ auto decl<test>()
 template <>
 auto decl<complex>()
 {
-  return json_bind(jsb::bind<&complex::array>("array"),
+  return json_bind(jsb::bind<&complex::vec>("vec"),
+                   jsb::bind<&complex::arr>("arr"),
                    jsb::bind<&complex::map>("map"));
 }
 } // namespace jsb
@@ -105,10 +107,12 @@ TEST_CASE("Array test", "[validity]")
 TEST_CASE("Nested type test", "[validity]")
 {
   complex write, read;
-  write.array.push_back(test());
-  write.array.push_back(test());
-  write.array.push_back(test());
-  write.array.push_back(test());
+  write.vec.push_back(test());
+  write.vec.push_back(test());
+  write.vec.push_back(test());
+  write.vec.push_back(test());
+  write.arr[0] = 12;
+  write.arr[1] = 32;
 
   write.map = {
       {"first", 1},
@@ -267,7 +271,7 @@ TEST_CASE("Variant test", "[validity]")
 struct int_cast
 {
   std::int64_t value;
-  std::string ignore;
+  std::string  ignore;
 
   explicit operator std::int64_t() const
   {
@@ -286,7 +290,7 @@ struct int_cast
 struct uint_cast
 {
   std::uint64_t value;
-  std::string ignore;
+  std::string   ignore;
 
   explicit operator std::uint64_t() const
   {
@@ -305,7 +309,7 @@ struct uint_cast
 TEST_CASE("Int cast", "[validity]")
 {
   int_cast write, read;
-  
+
   write = -100;
   std::stringstream ss;
   jsb::stream_out(ss, write);
@@ -319,7 +323,7 @@ TEST_CASE("Int cast", "[validity]")
 TEST_CASE("UInt cast", "[validity]")
 {
   uint_cast write, read;
-  
+
   write = 0xffffaaaa;
   std::stringstream ss;
   jsb::stream_out(ss, write);

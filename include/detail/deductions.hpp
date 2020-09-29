@@ -311,6 +311,9 @@ concept HasEmplaceBack = requires(Class obj, ValueType value)
   obj.emplace_back(value);
 };
 
+template <typename Class, typename ValueType>
+concept HasEmplaceFn = HasEmplace<Class, ValueType> || HasEmplaceBack<Class, ValueType> || HasPushBack<Class, ValueType>;
+
 template <typename Class>
 concept NamePairList = ValuePairList<Class>&&
     IsString<std::decay_t<decltype((*std::begin(Class())).first)>>;
