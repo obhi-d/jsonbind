@@ -196,6 +196,8 @@ concept IsString =
 template <typename T>
 concept IsSignedCastable = requires(T t)
 {
+  static_cast<std::int64_t>(t);
+
   {
     static_cast<std::int64_t>(t)
   }
@@ -212,6 +214,8 @@ concept IsSigned = (std::is_signed_v<T> && std::is_integral_v<T>) ||
 template <typename T>
 concept IsUnsignedCastable = requires(T t)
 {
+  static_cast<std::uint64_t>(t);
+  
   {
     static_cast<std::uint64_t>(t)
   }

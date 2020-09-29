@@ -282,10 +282,42 @@ struct int_cast
   auto operator<=>(int_cast const& other) const = default;
 };
 
+struct uint_cast
+{
+  std::uint64_t value;
+
+  operator std::uint64_t() const
+  {
+    return value;
+  }
+
+  uint_cast& operator=(std::uint64_t val)
+  {
+    value = val;
+    return *this;
+  }
+
+  auto operator<=>(uint_cast const& other) const = default;
+};
+
 TEST_CASE("Int cast", "[validity]")
 {
   int_cast write, read;
+  
+  write = 100;
+  std::stringstream ss;
+  jsb::stream_out(ss, write);
 
+  auto jv = nlohmann::json::parse(ss);
+  REQUIRE(jsb::stream_in(jv, read) == true);
+
+  REQUIRE(read == write);
+}
+
+TEST_CASE("UInt cast", "[validity]")
+{
+  uint_cast write, read;
+  
   write = 100;
   std::stringstream ss;
   jsb::stream_out(ss, write);
