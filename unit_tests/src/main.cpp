@@ -267,8 +267,9 @@ TEST_CASE("Variant test", "[validity]")
 struct int_cast
 {
   std::int64_t value;
+  std::string ignore;
 
-  operator std::int64_t() const
+  explicit operator std::int64_t() const
   {
     return value;
   }
@@ -285,8 +286,9 @@ struct int_cast
 struct uint_cast
 {
   std::uint64_t value;
+  std::string ignore;
 
-  operator std::uint64_t() const
+  explicit operator std::uint64_t() const
   {
     return value;
   }
@@ -304,7 +306,7 @@ TEST_CASE("Int cast", "[validity]")
 {
   int_cast write, read;
   
-  write = 100;
+  write = -100;
   std::stringstream ss;
   jsb::stream_out(ss, write);
 
@@ -318,7 +320,7 @@ TEST_CASE("UInt cast", "[validity]")
 {
   uint_cast write, read;
   
-  write = 100;
+  write = 0xffffaaaa;
   std::stringstream ss;
   jsb::stream_out(ss, write);
 

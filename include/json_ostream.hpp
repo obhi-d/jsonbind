@@ -193,12 +193,12 @@ void json_ostream::stream(const Value& obj)
     ostr << std::boolalpha << static_cast<bool>(obj);
   else if constexpr (detail::IsFloat<value_type>)
     ostr << static_cast<double>(obj);
-  else if constexpr (detail::IsSigned<value_type> ||
-                     detail::IsSignedCastable<value_type>)
-    ostr << static_cast<std::int64_t>(obj);
   else if constexpr (detail::IsUnsigned<value_type> ||
                      detail::IsUnsignedCastable<value_type>)
     ostr << static_cast<std::uint64_t>(obj);
+  else if constexpr (detail::IsSigned<value_type> ||
+                     detail::IsSignedCastable<value_type>)
+    ostr << static_cast<std::int64_t>(obj);
   else if constexpr (detail::IsString<value_type>)
     ostr << "\"" << detail::as_string(obj) << "\"";
 }
