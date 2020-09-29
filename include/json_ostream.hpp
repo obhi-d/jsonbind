@@ -20,8 +20,8 @@ public:
   class object;
   class variant;
 
-  array  as_array();
-  object as_object();
+  inline array  as_array();
+  inline object as_object();
 
   template <typename Value>
   inline void stream(Value const& obj);

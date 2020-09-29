@@ -48,9 +48,9 @@ public:
   class object;
   class variant;
 
-  array   as_array();
-  object  as_object();
-  variant as_variant();
+  inline array   as_array();
+  inline object  as_object();
+  inline variant as_variant();
 
   template <typename Value>
   inline bool stream(Value& obj);
@@ -172,7 +172,7 @@ public:
         obj[index++] = std::move(stream_val);
       });
     }
-    
+
     return err_flag == 0;
   }
 
