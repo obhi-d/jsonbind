@@ -399,8 +399,6 @@ TEST_CASE("String transform test", "[validity]")
 
   std::stringstream ss;
   jsb::stream_out(ss, write);
-  jsb::stream_out(std::cout, write);
-  std::cout << std::endl;
 
   auto jv = nlohmann::json::parse(ss);
   REQUIRE(jsb::stream_in(jv, read) == true);

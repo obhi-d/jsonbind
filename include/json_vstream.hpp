@@ -228,7 +228,22 @@ bool json_vstream<JsonValue>::stream(Value& obj)
   using value_type = std::decay_t<Value>;
   int err_flag     = 0;
 
-  if constexpr (detail::IsMap<value_type>)
+  if constexpr (std::is_same_v<std::remove_cv_t<value_type>,
+                               std::remove_cv_t<JsonValue>>)
+    obj = value;
+  else if constexpr (detail::IsBool<value_type>)
+    obj = static_cast<value_type>(jv::as_bool(value));
+  else if constexpr (detail::IsFloat<value_type>)
+    obj = static_cast<value_type>(jv::as_float(value));
+  else if constexpr (detail::IsSigned<value_type>)
+    obj = static_cast<value_type>(jv::as_signed(value));
+  else if constexpr (detail::IsUnsigned<value_type>)
+    obj = static_cast<value_type>(jv::as_unsigned(value));
+  else if constexpr (detail::IsSignedCastable<value_type>)
+    obj = jv::as_signed(value);
+  else if constexpr (detail::IsUnsignedCastable<value_type>)
+    obj = jv::as_unsigned(value);
+  else if constexpr (detail::IsMap<value_type>)
     err_flag += !json_vstream<JsonValue>::object(value).stream(obj);
   else if constexpr (detail::IsArray<value_type>)
     err_flag += !json_vstream<JsonValue>::array(value).stream(obj);
@@ -258,21 +273,6 @@ bool json_vstream<JsonValue>::stream(Value& obj)
   }
   else if constexpr (detail::IsVariant<value_type>)
     err_flag += !json_vstream<JsonValue>::variant(value).stream(obj);
-  else if constexpr (detail::IsBool<value_type>)
-    obj = static_cast<value_type>(jv::as_bool(value));
-  else if constexpr (detail::IsFloat<value_type>)
-    obj = static_cast<value_type>(jv::as_float(value));
-  else if constexpr (detail::IsSigned<value_type>)
-    obj = static_cast<value_type>(jv::as_signed(value));
-  else if constexpr (detail::IsUnsigned<value_type>)
-    obj = static_cast<value_type>(jv::as_unsigned(value));
-  else if constexpr (detail::IsSignedCastable<value_type>)
-    obj = jv::as_signed(value);
-  else if constexpr (detail::IsUnsignedCastable<value_type>)
-    obj = jv::as_unsigned(value);
-  else if constexpr (std::is_same_v<std::remove_cv_t<value_type>,
-                                    std::remove_cv_t<JsonValue>>)
-    obj = value;
   else if constexpr (detail::IsString<value_type>)
   {
     if constexpr (detail::TransformFromString<value_type>)
