@@ -48,9 +48,9 @@ public:
   class object;
   class variant;
 
-  array   as_array();
-  object  as_object();
-  variant as_variant();
+  inline array   as_array();
+  inline object  as_object();
+  inline variant as_variant();
 
   template <typename Value>
   inline bool stream(Value& obj);
@@ -151,12 +151,28 @@ public:
     }
 
     detail::reserve(obj, detail::size(jv));
-    jv::array_for_each(jv, [this, &obj](JsonValue const& value) {
-      detail::array_value_t<Class> stream_val;
-      if (err_flag += !json_vstream<JsonValue>(value).stream(stream_val))
-        return;
-      detail::emplace(obj, std::move(stream_val));
-    });
+    if constexpr (detail::HasEmplaceFn<Class, detail::array_value_t<Class>>)
+    {
+      std::uint32_t index = 0;
+      jv::array_for_each(jv, [this, &obj](JsonValue const& value) {
+        detail::array_value_t<Class> stream_val;
+        if (err_flag += !json_vstream<JsonValue>(value).stream(stream_val))
+          return;
+
+        detail::emplace(obj, std::move(stream_val));
+      });
+    }
+    else
+    {
+      std::uint32_t index = 0;
+      jv::array_for_each(jv, [this, &obj, &index](JsonValue const& value) {
+        detail::array_value_t<Class> stream_val;
+        if (err_flag += !json_vstream<JsonValue>(value).stream(stream_val))
+          return;
+        obj[index++] = std::move(stream_val);
+      });
+    }
+
     return err_flag == 0;
   }
 
