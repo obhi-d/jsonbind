@@ -111,7 +111,7 @@ public:
           }
           else if (err_flag += !json_vstream<JsonValue>(value).stream(stream_val))
             return;
-          if constexpr (detail::IsString<nvname_t> ||
+          else if constexpr (detail::IsString<nvname_t> ||
                         detail::CastableFromStringView<nvname_t>)
             detail::emplace(obj, nvname_t(key), std::move(stream_val));
           else if constexpr (detail::CastableFromString<nvname_t>)
