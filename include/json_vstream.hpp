@@ -103,19 +103,20 @@ public:
     jv::map_for_each(
         jv, [this, &obj](std::string_view key, JsonValue const& value) {
           nvvalue_t stream_val;
-          if (err_flag += !json_vstream<JsonValue>(value).stream(stream_val))
+          if constexpr (detail::TransformFromString<nvname_t>)
+          {
+            nvname_t name;
+            jsb::string_transform<nvname_t>::from_string(name, key);
+            detail::emplace(obj, std::move(name), std::move(stream_val));
+          }
+          else if (err_flag += !json_vstream<JsonValue>(value).stream(stream_val))
             return;
           if constexpr (detail::IsString<nvname_t> ||
                         detail::CastableFromStringView<nvname_t>)
             detail::emplace(obj, nvname_t(key), std::move(stream_val));
           else if constexpr (detail::CastableFromString<nvname_t>)
             detail::emplace(obj, std::string(key), std::move(stream_val));
-          else if constexpr (detail::TransformFromString<nvname_t>)
-          {
-            nvname_t name;
-            jsb::string_transform<nvname_t>::from_string(name, key);
-            detail::emplace(obj, std::move(name), std::move(stream_val));
-          }
+          
         });
     return err_flag == 0;
   }

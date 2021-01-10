@@ -16,6 +16,7 @@ ExternalProject_Add(json
 
 ExternalProject_Add(Catch2
         GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+        GIT_TAG origin/v2.x
         PREFIX ${CMAKE_CURRENT_BINARY_DIR}/Catch2
         STEP_TARGETS install
         CMAKE_ARGS
